@@ -2,6 +2,18 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Install web support",
+      "type": "shell",
+      "command": "npm run install:web",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
       "label": "1) Stop old Expo tunnels",
       "type": "shell",
       "command": "npm run dev:stop",
