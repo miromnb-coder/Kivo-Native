@@ -23,7 +23,7 @@ export function KivoChatScreen() {
         damping: 22,
         stiffness: 170,
         mass: 0.9,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(appRadius, {
         toValue: plusExpanded ? 30 : 0,
@@ -33,7 +33,7 @@ export function KivoChatScreen() {
       Animated.timing(backdropOpacity, {
         toValue: plusExpanded ? 1 : 0,
         duration: plusExpanded ? 220 : 190,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
   }, [appRadius, appScale, backdropOpacity, plusExpanded]);
