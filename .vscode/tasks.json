@@ -14,9 +14,25 @@
       }
     },
     {
-      "label": "Start Expo tunnel",
+      "label": "Expo Tunnel - open on phone",
       "type": "shell",
-      "command": "npx expo start --tunnel",
+      "command": "npm run tunnel",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": false
+      }
+    },
+    {
+      "label": "Expo Tunnel Clean - reset cache",
+      "type": "shell",
+      "command": "npm run tunnel:clear",
       "group": "test",
       "isBackground": true,
       "problemMatcher": [],
@@ -27,9 +43,9 @@
       }
     },
     {
-      "label": "Start Expo tunnel clean",
+      "label": "Start Expo local",
       "type": "shell",
-      "command": "npx expo start --tunnel --clear",
+      "command": "npm start",
       "group": "test",
       "isBackground": true,
       "problemMatcher": [],
