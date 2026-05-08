@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Kivo Native",
+    "slug": "kivo-native",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "kivonative",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kivo.native"
+    },
+    "android": {
+      "package": "com.kivo.native"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-splash-screen"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
