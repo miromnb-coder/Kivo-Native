@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Keyboard, PanResponder, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, Keyboard, PanResponder, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { KivoComposer } from './KivoComposer';
@@ -8,6 +8,8 @@ import { KivoSidebarOverlay } from './KivoSidebarOverlay';
 import { KivoTodayDashboard } from './KivoTodayDashboard';
 import { KivoTopBar } from './KivoTopBar';
 
+const SIDEBAR_BACKGROUND = '#f4f4f6';
+
 const sampleConversations = [
   { id: 'recent-email', title: 'Katso minun viimeisimmät sähköpo...' },
   { id: 'recent-calendar', title: 'Lisää tapahtuma minun kalenteriin ...' },
@@ -15,6 +17,8 @@ const sampleConversations = [
   { id: 'recent-image-1', title: 'Mitä näet tässä kuvassa' },
   { id: 'recent-image-2', title: 'Mitä näet tässä kuvassa' },
   { id: 'recent-build', title: 'Miten voin tehdä oman sovelluksen' },
+  { id: 'recent-sidebar', title: 'Viimeistellään sivuvalikko täysin' },
+  { id: 'recent-native', title: 'Tee Kivo native näkymä valmiiksi' },
 ];
 
 function clamp(value: number, min = 0, max = 1) {
@@ -24,8 +28,8 @@ function clamp(value: number, min = 0, max = 1) {
 export function KivoChatScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const drawerWidth = Math.min(width * 0.86, 370);
-  const pushedDistance = drawerWidth - 20;
+  const drawerWidth = Math.min(width * 0.86, 372);
+  const pushedDistance = drawerWidth - 8;
   const [messages, setMessages] = useState<string[]>([]);
   const [plusOpen, setPlusOpen] = useState(false);
   const [plusExpanded, setPlusExpanded] = useState(false);
@@ -48,12 +52,12 @@ export function KivoChatScreen() {
 
   const chatScale = sidebarProgress.interpolate({
     inputRange: [0, 1],
-    outputRange: [1, 0.985],
+    outputRange: [1, 0.992],
   });
 
   const chatRadius = sidebarProgress.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 24],
+    outputRange: [0, 22],
   });
 
   useEffect(() => {
@@ -103,7 +107,8 @@ export function KivoChatScreen() {
 
     Animated.timing(sidebarProgress, {
       toValue,
-      duration: 325,
+      duration: 340,
+      easing: Easing.bezier(0.2, 0.82, 0.2, 1),
       useNativeDriver: false,
     }).start(({ finished }) => {
       if (!finished) return;
@@ -112,7 +117,7 @@ export function KivoChatScreen() {
         closeTimerRef.current = setTimeout(() => {
           setSidebarVisible(false);
           closeTimerRef.current = null;
-        }, 20);
+        }, 24);
       }
     });
   }
@@ -166,10 +171,10 @@ export function KivoChatScreen() {
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gesture) => {
         const current = sidebarProgressRef.current;
-        const fromLeftEdge = gesture.x0 < 32;
+        const fromLeftEdge = gesture.x0 < 42;
         const fromOpenChat = current > 0.01;
-        const movingRightToOpen = gesture.dx > 11 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.15;
-        const movingLeftToClose = gesture.dx < -11 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.15;
+        const movingRightToOpen = gesture.dx > 10 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.14;
+        const movingLeftToClose = gesture.dx < -10 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.14;
         return (fromLeftEdge && movingRightToOpen) || (fromOpenChat && movingLeftToClose);
       },
       onPanResponderGrant: () => {
@@ -200,7 +205,7 @@ export function KivoChatScreen() {
         const elapsed = Math.max(1, Date.now() - dragStartTimeRef.current);
         const velocity = gesture.dx / elapsed;
         const current = sidebarProgressRef.current;
-        const shouldOpen = velocity > 0.42 || (velocity > -0.34 && current > 0.42);
+        const shouldOpen = velocity > 0.38 || (velocity > -0.34 && current > 0.42);
         dragModeRef.current = 'idle';
         endSidebarGesture(shouldOpen);
       },
@@ -272,7 +277,7 @@ export function KivoChatScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#f3f3f5',
+    backgroundColor: SIDEBAR_BACKGROUND,
   },
   blackBackdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -283,9 +288,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     overflow: 'hidden',
     shadowColor: '#0f172a',
-    shadowOpacity: 0.055,
-    shadowRadius: 34,
-    shadowOffset: { width: -8, height: 0 },
+    shadowOpacity: 0.05,
+    shadowRadius: 38,
+    shadowOffset: { width: -10, height: 0 },
   },
   sidebarDismissLayer: {
     ...StyleSheet.absoluteFillObject,
