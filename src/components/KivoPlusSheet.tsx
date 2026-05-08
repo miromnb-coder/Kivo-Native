@@ -1,7 +1,8 @@
 import { Feather } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KivoConnectorDetailView, type NativeConnector } from './KivoConnectorDetailView';
 
 type Props = {
   open: boolean;
@@ -15,9 +16,8 @@ type ActionItem = {
   badge?: string;
 };
 
-type ConnectorItem = {
-  title: string;
-  initial: string;
+type ConnectorItem = NativeConnector & {
+  id: string;
 };
 
 const actions: ActionItem[] = [
@@ -29,18 +29,56 @@ const actions: ActionItem[] = [
   { title: 'Connect tools', icon: 'plug' },
 ];
 
+const connectorAssetBase = 'https://raw.githubusercontent.com/miromnb-coder/Kivo/main/public/connectors';
+
 const connectors: ConnectorItem[] = [
-  { title: 'Google Drive', initial: 'D' },
-  { title: 'Gmail', initial: 'G' },
-  { title: 'Google Calendar', initial: 'C' },
-  { title: 'Outlook Calendar', initial: 'O' },
-  { title: 'Outlook Mail', initial: 'M' },
+  {
+    id: 'google-drive',
+    title: 'Google Drive',
+    iconUri: `${connectorAssetBase}/google-drive.PNG`,
+    description: 'Connect Google Drive to Kivo to search files, summarize documents, analyze folders, and use workspace content in conversations.',
+    category: 'Productivity',
+    features: 'File search',
+  },
+  {
+    id: 'gmail',
+    title: 'Gmail',
+    iconUri: `${connectorAssetBase}/gmail.PNG`,
+    description: 'Connect Gmail to Kivo to summarize conversations, draft replies, surface recent threads, prepare meeting context, and highlight action items.',
+    category: 'Productivity',
+    features: 'Email assistance',
+  },
+  {
+    id: 'google-calendar',
+    title: 'Google Calendar',
+    iconUri: `${connectorAssetBase}/google-calendar.PNG`,
+    description: 'Connect Google Calendar to Kivo to review your schedule, plan your day, prepare meetings, and create smarter reminders.',
+    category: 'Productivity',
+    features: 'Calendar planning',
+  },
+  {
+    id: 'outlook-calendar',
+    title: 'Outlook Calendar',
+    iconUri: `${connectorAssetBase}/outlook-calendar.PNG`,
+    description: 'Connect Outlook Calendar to Kivo to organize events, prepare meeting context, find open time, and keep your day on track.',
+    category: 'Productivity',
+    features: 'Calendar planning',
+  },
+  {
+    id: 'outlook-mail',
+    title: 'Outlook Mail',
+    iconUri: `${connectorAssetBase}/outlook-mail.PNG`,
+    description: 'Connect Outlook Mail to Kivo to summarize emails, draft responses, find important messages, and turn threads into next steps.',
+    category: 'Productivity',
+    features: 'Email assistance',
+  },
 ];
 
 export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const [expanded, setExpanded] = useState(false);
+  const [selectedConnector, setSelectedConnector] = useState<ConnectorItem | null>(null);
   const expandedRef = useRef(false);
   const translateY = useRef(new Animated.Value(height)).current;
 
@@ -63,6 +101,7 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
 
   function closeWithAnimation() {
     updateExpanded(false);
+    setSelectedConnector(null);
     Animated.timing(translateY, {
       toValue: height,
       duration: 210,
@@ -113,6 +152,7 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
     if (!open) return;
     expandedRef.current = false;
     setExpanded(false);
+    setSelectedConnector(null);
     onExpandedChange?.(false);
     translateY.setValue(height);
     springToOpen();
@@ -160,12 +200,16 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
             <Text style={styles.connectorsTitle}>Connectors</Text>
             <View style={styles.connectorsList}>
               {connectors.map((connector) => (
-                <ConnectorRow key={connector.title} connector={connector} />
+                <ConnectorRow key={connector.id} connector={connector} onOpen={() => setSelectedConnector(connector)} />
               ))}
             </View>
           </View>
         </ScrollView>
       </Animated.View>
+
+      {selectedConnector ? (
+        <KivoConnectorDetailView connector={selectedConnector} topInset={insets.top} bottomInset={insets.bottom} onBack={() => setSelectedConnector(null)} />
+      ) : null}
     </View>
   );
 }
@@ -192,17 +236,29 @@ function ActionRow({ item, onPress }: { item: ActionItem; onPress?: () => void }
   );
 }
 
-function ConnectorRow({ connector }: { connector: ConnectorItem }) {
+function ConnectorIcon({ connector }: { connector: ConnectorItem }) {
+  const [failed, setFailed] = useState(false);
+
   return (
-    <Pressable style={({ pressed }) => [styles.connectorRow, pressed && styles.pressedRow]}>
-      <View style={styles.connectorIcon}>
-        <Text style={styles.connectorInitial}>{connector.initial}</Text>
-      </View>
+    <View style={styles.connectorIcon}>
+      {failed ? (
+        <Text style={styles.connectorInitial}>{connector.title.slice(0, 1)}</Text>
+      ) : (
+        <Image source={{ uri: connector.iconUri }} style={styles.connectorImage} resizeMode="contain" onError={() => setFailed(true)} />
+      )}
+    </View>
+  );
+}
+
+function ConnectorRow({ connector, onOpen }: { connector: ConnectorItem; onOpen: () => void }) {
+  return (
+    <View style={styles.connectorRow}>
+      <ConnectorIcon connector={connector} />
       <Text numberOfLines={1} style={styles.connectorTitle}>{connector.title}</Text>
-      <View style={styles.connectButton}>
+      <Pressable style={({ pressed }) => [styles.connectButton, pressed && styles.pressed]} onPress={onOpen}>
         <Text style={styles.connectButtonText}>Connect</Text>
-      </View>
-    </Pressable>
+      </Pressable>
+    </View>
   );
 }
 
@@ -349,9 +405,14 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 7,
+    overflow: 'hidden',
     backgroundColor: '#f1f1f3',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  connectorImage: {
+    width: '100%',
+    height: '100%',
   },
   connectorInitial: {
     color: '#777982',
