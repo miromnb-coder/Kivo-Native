@@ -67,7 +67,7 @@ export function KivoComposer({ onSubmit }: Props) {
   const actionEnabled = canSend || keyboardOpen;
 
   return (
-    <Animated.View style={[styles.wrap, { paddingBottom: insets.bottom + 12, transform: [{ translateY: Animated.multiply(offset, -1) }] }]}>
+    <Animated.View style={[styles.wrap, { paddingBottom: insets.bottom + 8, transform: [{ translateY: Animated.multiply(offset, -1) }] }]}>
       <View style={styles.composer}>
         <TextInput
           ref={inputRef}
@@ -101,7 +101,7 @@ export function KivoComposer({ onSubmit }: Props) {
                 pressed && actionEnabled && styles.pressed,
               ]}
             >
-              <Feather name={actionIcon} size={22} color={canSend ? '#ffffff' : '#cfcfd4'} strokeWidth={1.85} />
+              <Feather name={actionIcon} size={21} color={canSend ? '#ffffff' : '#cfcfd4'} strokeWidth={1.85} />
             </Pressable>
           </View>
         </View>
@@ -118,7 +118,7 @@ function CircleButton({ icon, onPress }: { icon: keyof typeof Feather.glyphMap; 
       hitSlop={8}
       style={({ pressed }) => [styles.circle, styles.controlCircle, pressed && styles.pressed]}
     >
-      <Feather name={icon} size={21} color={colors.text} strokeWidth={1.75} />
+      <Feather name={icon} size={20} color={colors.text} strokeWidth={1.75} />
     </Pressable>
   );
 }
@@ -132,22 +132,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   composer: {
-    minHeight: 142,
+    height: 124,
     borderRadius: 34,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.035)',
     backgroundColor: '#fbfbfc',
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingTop: 13,
+    paddingBottom: 10,
     shadowColor: '#0f172a',
-    shadowOpacity: 0.045,
-    shadowRadius: 34,
-    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.04,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 16 },
   },
   input: {
-    minHeight: 28,
-    maxHeight: 92,
+    height: 26,
     paddingHorizontal: 4,
     paddingTop: 0,
     paddingBottom: 0,
@@ -157,7 +156,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.42,
   },
   controls: {
-    marginTop: 15,
+    marginTop: 13,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -171,8 +170,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   circle: {
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
