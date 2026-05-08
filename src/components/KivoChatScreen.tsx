@@ -16,7 +16,8 @@ export function KivoChatScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.backgroundGlow} />
+      <View style={styles.softGlowTop} />
+      <View style={styles.softGlowCenter} />
       <View style={[styles.topBar, { paddingTop: insets.top + 6 }]}>
         <KivoTopBar onOpenModes={() => Keyboard.dismiss()} />
       </View>
@@ -47,14 +48,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     overflow: 'hidden',
   },
-  backgroundGlow: {
+  softGlowTop: {
     position: 'absolute',
-    top: 120,
-    left: -80,
-    right: -80,
-    height: 520,
-    borderRadius: 300,
-    backgroundColor: 'rgba(255,255,255,0.72)',
+    top: 72,
+    left: 36,
+    right: 36,
+    height: 170,
+    borderRadius: 170,
+    backgroundColor: 'rgba(255,255,255,0.42)',
+  },
+  softGlowCenter: {
+    position: 'absolute',
+    top: 210,
+    left: -70,
+    right: -70,
+    height: 420,
+    borderRadius: 280,
+    backgroundColor: 'rgba(255,255,255,0.38)',
   },
   topBar: {
     zIndex: 20,
@@ -83,7 +93,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     maxWidth: '86%',
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.72)',
+    backgroundColor: 'rgba(255,255,255,0.74)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.045)',
     paddingHorizontal: 15,
