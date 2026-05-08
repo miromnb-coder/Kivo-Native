@@ -74,7 +74,7 @@ export function KivoComposer({ onSubmit }: Props) {
           value={value}
           onChangeText={setValue}
           placeholder="Ask anything or assign a task"
-          placeholderTextColor="#a8a8af"
+          placeholderTextColor="#a9a9b0"
           multiline
           style={styles.input}
           selectionColor={colors.text}
@@ -132,31 +132,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   composer: {
-    height: 108,
-    borderRadius: 32,
+    height: 103,
+    borderRadius: 34,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.035)',
+    borderColor: 'rgba(0,0,0,0.028)',
     backgroundColor: '#fbfbfc',
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 7,
     shadowColor: '#0f172a',
-    shadowOpacity: 0.038,
+    shadowOpacity: 0.035,
     shadowRadius: 28,
     shadowOffset: { width: 0, height: 14 },
   },
   input: {
-    height: 24,
+    height: 23,
     paddingHorizontal: 4,
     paddingTop: 0,
     paddingBottom: 0,
     color: colors.text,
-    fontSize: 17.5,
-    lineHeight: 23,
+    fontSize: 16.8,
+    lineHeight: 22,
     letterSpacing: -0.42,
   },
   controls: {
-    marginTop: 16,
+    marginTop: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   },
   controlCircle: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.055)',
+    borderColor: 'rgba(0,0,0,0.048)',
     backgroundColor: '#fbfbfc',
   },
   sendButton: {
