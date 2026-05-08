@@ -41,9 +41,12 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const [expanded, setExpanded] = useState(false);
+  const expandedRef = useRef(false);
   const translateY = useRef(new Animated.Value(height)).current;
 
   function updateExpanded(nextExpanded: boolean) {
+    if (expandedRef.current === nextExpanded) return;
+    expandedRef.current = nextExpanded;
     setExpanded(nextExpanded);
     onExpandedChange?.(nextExpanded);
   }
@@ -51,15 +54,15 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
   function springToOpen() {
     Animated.spring(translateY, {
       toValue: 0,
-      damping: 20,
-      stiffness: 185,
-      mass: 0.82,
+      damping: 24,
+      stiffness: 210,
+      mass: 0.78,
       useNativeDriver: true,
     }).start();
   }
 
   function closeWithAnimation() {
-    onExpandedChange?.(false);
+    updateExpanded(false);
     Animated.timing(translateY, {
       toValue: height,
       duration: 210,
@@ -72,23 +75,30 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
   const panResponder = useMemo(
     () => PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 3,
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 2,
       onPanResponderGrant: () => {
         translateY.stopAnimation();
       },
       onPanResponderMove: (_, gesture) => {
-        const nextY = gesture.dy > 0 ? gesture.dy : gesture.dy * 0.22;
-        translateY.setValue(nextY);
+        if (gesture.dy < 0) {
+          if (gesture.dy < -28) updateExpanded(true);
+          const softPull = Math.max(gesture.dy, -92) * 0.72;
+          translateY.setValue(softPull);
+          return;
+        }
+
+        if (expandedRef.current && gesture.dy > 54) updateExpanded(false);
+        translateY.setValue(gesture.dy);
       },
       onPanResponderRelease: (_, gesture) => {
-        if (gesture.dy > 118 || gesture.vy > 0.85) {
+        if (gesture.dy > 126 || gesture.vy > 0.9) {
           closeWithAnimation();
           return;
         }
 
-        if (gesture.dy < -42 || gesture.vy < -0.65) {
+        if (gesture.dy < -22 || gesture.vy < -0.38) {
           updateExpanded(true);
-        } else if (expanded && gesture.dy > 58) {
+        } else if (expandedRef.current && gesture.dy > 46) {
           updateExpanded(false);
         }
 
@@ -96,15 +106,17 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
       },
       onPanResponderTerminate: springToOpen,
     }),
-    [expanded, height, onExpandedChange, translateY],
+    [height, translateY],
   );
 
   useEffect(() => {
     if (!open) return;
-    updateExpanded(false);
+    expandedRef.current = false;
+    setExpanded(false);
+    onExpandedChange?.(false);
     translateY.setValue(height);
     springToOpen();
-  }, [height, open, translateY]);
+  }, [height, onExpandedChange, open, translateY]);
 
   if (!open) return null;
 
@@ -229,15 +241,15 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,0,0,0.035)',
   },
   handleWrap: {
-    height: 36,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -18,
+    marginTop: -20,
     marginBottom: 4,
   },
   handleHitArea: {
-    width: 140,
-    height: 36,
+    width: 150,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
