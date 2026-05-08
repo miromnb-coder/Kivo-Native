@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../theme/colors';
 
 type Props = {
   open: boolean;
@@ -39,16 +39,86 @@ const connectors: ConnectorItem[] = [
 export function KivoPlusSheet({ open, onClose }: Props) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
+  const [expanded, setExpanded] = useState(false);
+  const translateY = useRef(new Animated.Value(height)).current;
+
+  function springToOpen() {
+    Animated.spring(translateY, {
+      toValue: 0,
+      damping: 20,
+      stiffness: 185,
+      mass: 0.82,
+      useNativeDriver: true,
+    }).start();
+  }
+
+  function closeWithAnimation() {
+    Animated.timing(translateY, {
+      toValue: height,
+      duration: 210,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) onClose();
+    });
+  }
+
+  const panResponder = useMemo(
+    () => PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 3,
+      onPanResponderGrant: () => {
+        translateY.stopAnimation();
+      },
+      onPanResponderMove: (_, gesture) => {
+        const nextY = gesture.dy > 0 ? gesture.dy : gesture.dy * 0.22;
+        translateY.setValue(nextY);
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dy > 118 || gesture.vy > 0.85) {
+          closeWithAnimation();
+          return;
+        }
+
+        if (gesture.dy < -42 || gesture.vy < -0.65) {
+          setExpanded(true);
+        } else if (expanded && gesture.dy > 58) {
+          setExpanded(false);
+        }
+
+        springToOpen();
+      },
+      onPanResponderTerminate: springToOpen,
+    }),
+    [expanded, height, translateY],
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    setExpanded(false);
+    translateY.setValue(height);
+    springToOpen();
+  }, [height, open, translateY]);
 
   if (!open) return null;
 
   return (
     <View style={styles.layer} pointerEvents="box-none">
-      <Pressable accessibilityRole="button" accessibilityLabel="Close plus menu" style={styles.backdrop} onPress={onClose} />
+      <Pressable accessibilityRole="button" accessibilityLabel="Close plus menu" style={styles.backdrop} onPress={closeWithAnimation} />
 
-      <View style={[styles.sheet, { maxHeight: height * 0.79, paddingBottom: insets.bottom + 22 }]}> 
-        <View style={styles.handleWrap}>
-          <View style={styles.handle} />
+      <Animated.View
+        style={[
+          styles.sheet,
+          {
+            maxHeight: height * (expanded ? 0.92 : 0.79),
+            paddingBottom: insets.bottom + 22,
+            transform: [{ translateY }],
+          },
+        ]}
+      >
+        <View style={styles.handleWrap} {...panResponder.panHandlers}>
+          <View style={styles.handleHitArea}>
+            <View style={styles.handle} />
+          </View>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} bounces={false} contentContainerStyle={styles.scrollContent}>
@@ -61,7 +131,7 @@ export function KivoPlusSheet({ open, onClose }: Props) {
 
           <View style={styles.actionsList}>
             {actions.map((item) => (
-              <ActionRow key={item.title} item={item} onPress={item.title === 'Add files' ? onClose : undefined} />
+              <ActionRow key={item.title} item={item} onPress={item.title === 'Add files' ? closeWithAnimation : undefined} />
             ))}
           </View>
 
@@ -76,7 +146,7 @@ export function KivoPlusSheet({ open, onClose }: Props) {
             </View>
           </View>
         </ScrollView>
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -152,11 +222,17 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,0,0,0.035)',
   },
   handleWrap: {
-    height: 24,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -12,
-    marginBottom: 10,
+    marginTop: -18,
+    marginBottom: 4,
+  },
+  handleHitArea: {
+    width: 140,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   handle: {
     width: 76,
