@@ -35,6 +35,8 @@ type RecentItemProps = {
   onLongPress?: () => void;
 };
 
+const SIDEBAR_BACKGROUND = '#f4f4f6';
+
 const FALLBACK_RECENTS: KivoNativeConversation[] = [
   { id: 'fallback-email', title: 'Katso minun viimeisimmät sähköpo...' },
   { id: 'fallback-calendar', title: 'Lisää tapahtuma minun kalenteriin ...' },
@@ -42,6 +44,8 @@ const FALLBACK_RECENTS: KivoNativeConversation[] = [
   { id: 'fallback-image-1', title: 'Mitä näet tässä kuvassa' },
   { id: 'fallback-image-2', title: 'Mitä näet tässä kuvassa' },
   { id: 'fallback-build', title: 'Miten voin tehdä oman sovelluksen' },
+  { id: 'fallback-native', title: 'Tee Kivo Native valmiiksi' },
+  { id: 'fallback-sidebar', title: 'Viimeistellään sivuvalikko täysin' },
 ];
 
 function clamp(value: number, min = 0, max = 1) {
@@ -188,7 +192,7 @@ export function KivoSidebarOverlay({
             </View>
           </ScrollView>
 
-          <View style={[styles.footer, { paddingBottom: insets.bottom + 24 }]}>
+          <View style={[styles.footer, { paddingBottom: Math.max(22, insets.bottom + 22) }]}>
             <Pressable style={({ pressed }) => [styles.profilePill, pressed && styles.pressed]}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>M</Text>
@@ -289,30 +293,30 @@ const styles = StyleSheet.create({
     bottom: 0,
     overflow: 'hidden',
     borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: 'rgba(0,0,0,0.035)',
-    backgroundColor: '#f4f4f6',
+    borderRightColor: 'rgba(0,0,0,0.025)',
+    backgroundColor: SIDEBAR_BACKGROUND,
     shadowColor: '#0f172a',
-    shadowOpacity: 0.042,
-    shadowRadius: 44,
-    shadowOffset: { width: 12, height: 0 },
+    shadowOpacity: 0.03,
+    shadowRadius: 32,
+    shadowOffset: { width: 10, height: 0 },
   },
   drawerGestureEdge: {
     position: 'absolute',
     top: 0,
     right: 0,
     bottom: 0,
-    width: 28,
+    width: 22,
     backgroundColor: 'transparent',
   },
   inner: {
     flex: 1,
-    backgroundColor: '#f4f4f6',
+    backgroundColor: SIDEBAR_BACKGROUND,
   },
   header: {
-    height: 56,
+    height: 58,
     justifyContent: 'flex-end',
     paddingHorizontal: 36,
-    paddingBottom: 7,
+    paddingBottom: 8,
   },
   logo: {
     color: '#111113',
@@ -323,14 +327,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 36,
-    paddingTop: 32,
-    paddingBottom: 42,
+    paddingTop: 36,
+    paddingBottom: 36,
   },
   nav: {
-    gap: 18,
+    gap: 20,
   },
   menuItem: {
-    height: 56,
+    height: 58,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 20,
@@ -354,43 +358,44 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(0,0,0,0.08)',
-    marginVertical: 34,
+    backgroundColor: 'rgba(0,0,0,0.072)',
+    marginTop: 36,
+    marginBottom: 30,
   },
   recentList: {
-    gap: 6,
+    gap: 3,
   },
   recentItem: {
-    minHeight: 48,
+    minHeight: 47,
     borderRadius: 14,
     justifyContent: 'center',
-    paddingHorizontal: 4,
-    paddingVertical: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
   },
   recentItemActive: {
-    backgroundColor: 'rgba(255,255,255,0.46)',
+    backgroundColor: 'rgba(255,255,255,0.52)',
   },
   recentText: {
     color: '#2b2c31',
     fontSize: 16,
     fontWeight: '400',
-    letterSpacing: -0.4,
-    lineHeight: 19.2,
+    letterSpacing: -0.43,
+    lineHeight: 19.5,
   },
   footer: {
     paddingHorizontal: 36,
-    paddingTop: 12,
+    paddingTop: 11,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 16,
-    backgroundColor: '#f4f4f6',
+    backgroundColor: SIDEBAR_BACKGROUND,
   },
   profilePill: {
     width: 138,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(255,255,255,0.78)',
+    backgroundColor: 'rgba(255,255,255,0.82)',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -398,8 +403,8 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.018)',
     shadowColor: '#0f172a',
-    shadowOpacity: 0.03,
-    shadowRadius: 26,
+    shadowOpacity: 0.028,
+    shadowRadius: 24,
     shadowOffset: { width: 0, height: 10 },
   },
   avatar: {
@@ -426,14 +431,14 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.78)',
+    backgroundColor: 'rgba(255,255,255,0.82)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.018)',
     shadowColor: '#0f172a',
-    shadowOpacity: 0.03,
-    shadowRadius: 26,
+    shadowOpacity: 0.028,
+    shadowRadius: 24,
     shadowOffset: { width: 0, height: 10 },
   },
   composePressed: {
