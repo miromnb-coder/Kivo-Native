@@ -11,28 +11,39 @@ type Props = {
 export function KivoComposer({ onSubmit }: Props) {
   const insets = useSafeAreaInsets();
   const [value, setValue] = useState('');
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const inputRef = useRef<TextInput>(null);
   const offset = useRef(new Animated.Value(0)).current;
   const canSend = value.trim().length > 0;
+
+  function animateOffset(toValue: number, duration = 240) {
+    Animated.timing(offset, {
+      toValue,
+      duration,
+      useNativeDriver: true,
+    }).start();
+  }
+
+  function dismissKeyboard() {
+    inputRef.current?.blur();
+    Keyboard.dismiss();
+    setKeyboardOpen(false);
+    animateOffset(0, 220);
+  }
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const show = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardOpen(true);
       const height = Math.max(0, event.endCoordinates.height - insets.bottom + 10);
-      Animated.timing(offset, {
-        toValue: height,
-        duration: Platform.OS === 'ios' ? event.duration || 260 : 220,
-        useNativeDriver: true,
-      }).start();
+      animateOffset(height, Platform.OS === 'ios' ? event.duration || 260 : 220);
     });
 
     const hide = Keyboard.addListener(hideEvent, (event) => {
-      Animated.timing(offset, {
-        toValue: 0,
-        duration: Platform.OS === 'ios' ? event.duration || 240 : 220,
-        useNativeDriver: true,
-      }).start();
+      setKeyboardOpen(false);
+      animateOffset(0, Platform.OS === 'ios' ? event.duration || 240 : 220);
     });
 
     return () => {
@@ -45,14 +56,21 @@ export function KivoComposer({ onSubmit }: Props) {
     const message = value.trim();
     if (!message) return;
     setValue('');
+    inputRef.current?.blur();
     onSubmit?.(message);
     Keyboard.dismiss();
+    setKeyboardOpen(false);
+    animateOffset(0, 220);
   }
+
+  const actionIcon = canSend ? 'arrow-up' : keyboardOpen ? 'chevron-down' : 'arrow-up';
+  const actionEnabled = canSend || keyboardOpen;
 
   return (
     <Animated.View style={[styles.wrap, { paddingBottom: insets.bottom + 12, transform: [{ translateY: Animated.multiply(offset, -1) }] }]}>
       <View style={styles.composer}>
         <TextInput
+          ref={inputRef}
           value={value}
           onChangeText={setValue}
           placeholder="Ask anything or assign a task"
@@ -67,10 +85,14 @@ export function KivoComposer({ onSubmit }: Props) {
             <CircleButton icon="sliders" />
           </View>
           <View style={styles.rightControls}>
-            <CircleButton icon="message-circle" />
+            <CircleButton icon="message-circle" onPress={dismissKeyboard} />
             <CircleButton icon="mic" />
-            <Pressable onPress={submit} disabled={!canSend} style={[styles.circle, canSend ? styles.sendActive : styles.sendIdle]}>
-              <Feather name="arrow-up" size={22} color={canSend ? '#ffffff' : '#cfcfd4'} strokeWidth={1.8} />
+            <Pressable
+              onPress={canSend ? submit : dismissKeyboard}
+              disabled={!actionEnabled}
+              style={[styles.circle, canSend ? styles.sendActive : styles.sendIdle]}
+            >
+              <Feather name={actionIcon} size={22} color={canSend ? '#ffffff' : '#cfcfd4'} strokeWidth={1.8} />
             </Pressable>
           </View>
         </View>
@@ -79,9 +101,9 @@ export function KivoComposer({ onSubmit }: Props) {
   );
 }
 
-function CircleButton({ icon }: { icon: keyof typeof Feather.glyphMap }) {
+function CircleButton({ icon, onPress }: { icon: keyof typeof Feather.glyphMap; onPress?: () => void }) {
   return (
-    <Pressable style={({ pressed }) => [styles.circle, styles.controlCircle, pressed && styles.pressed]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.circle, styles.controlCircle, pressed && styles.pressed]}>
       <Feather name={icon} size={20} color={colors.text} strokeWidth={1.7} />
     </Pressable>
   );
