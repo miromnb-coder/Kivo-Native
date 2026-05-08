@@ -67,7 +67,7 @@ export function KivoComposer({ onSubmit }: Props) {
   const actionEnabled = canSend || keyboardOpen;
 
   return (
-    <Animated.View style={[styles.wrap, { paddingBottom: insets.bottom + 8, transform: [{ translateY: Animated.multiply(offset, -1) }] }]}>
+    <Animated.View style={[styles.wrap, { paddingBottom: Math.max(10, insets.bottom - 18), transform: [{ translateY: Animated.multiply(offset, -1) }] }]}>
       <View style={styles.composer}>
         <TextInput
           ref={inputRef}
@@ -132,31 +132,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   composer: {
-    height: 124,
-    borderRadius: 34,
+    height: 108,
+    borderRadius: 32,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.035)',
     backgroundColor: '#fbfbfc',
     paddingHorizontal: 16,
-    paddingTop: 13,
-    paddingBottom: 10,
+    paddingTop: 12,
+    paddingBottom: 8,
     shadowColor: '#0f172a',
-    shadowOpacity: 0.04,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.038,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 14 },
   },
   input: {
-    height: 26,
+    height: 24,
     paddingHorizontal: 4,
     paddingTop: 0,
     paddingBottom: 0,
     color: colors.text,
     fontSize: 17.5,
-    lineHeight: 24,
+    lineHeight: 23,
     letterSpacing: -0.42,
   },
   controls: {
-    marginTop: 13,
+    marginTop: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -170,8 +170,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   circle: {
-    width: 42,
-    height: 42,
+    width: 40,
+    height: 40,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
