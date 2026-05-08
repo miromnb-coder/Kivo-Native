@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, Vibration, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Animated, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type KivoNativeConversation = {
@@ -9,12 +9,16 @@ export type KivoNativeConversation = {
 };
 
 type Props = {
-  open: boolean;
+  visible: boolean;
+  progress: Animated.Value;
+  drawerWidth: number;
   conversations?: KivoNativeConversation[];
   activeConversationId?: string | null;
   onClose: () => void;
   onNewChat: () => void;
   onOpenConversation?: (conversationId: string) => void;
+  onGestureProgress: (progress: number) => void;
+  onGestureEnd: (open: boolean) => void;
 };
 
 type MenuItemProps = {
@@ -31,7 +35,6 @@ type RecentItemProps = {
   onLongPress?: () => void;
 };
 
-const ANIMATION_MS = 320;
 const FALLBACK_RECENTS: KivoNativeConversation[] = [
   { id: 'fallback-email', title: 'Katso minun viimeisimmät sähköpo...' },
   { id: 'fallback-calendar', title: 'Lisää tapahtuma minun kalenteriin ...' },
@@ -41,151 +44,100 @@ const FALLBACK_RECENTS: KivoNativeConversation[] = [
   { id: 'fallback-build', title: 'Miten voin tehdä oman sovelluksen' },
 ];
 
-function triggerHaptic(type: 'open' | 'close' | 'action') {
-  try {
-    Vibration.vibrate(type === 'open' ? [8, 18, 8] : type === 'action' ? 12 : 10);
-  } catch {
-    // Ignore safely on platforms where vibration is unavailable.
-  }
+function clamp(value: number, min = 0, max = 1) {
+  return Math.min(max, Math.max(min, value));
 }
 
-export function KivoSidebarOverlay({ open, conversations = [], activeConversationId = null, onClose, onNewChat, onOpenConversation }: Props) {
+export function KivoSidebarOverlay({
+  visible,
+  progress,
+  drawerWidth,
+  conversations = [],
+  activeConversationId = null,
+  onClose,
+  onNewChat,
+  onOpenConversation,
+  onGestureProgress,
+  onGestureEnd,
+}: Props) {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
-  const drawerWidth = Math.min(width * 0.86, 370);
-  const closedX = -drawerWidth - 34;
-  const [isPresent, setIsPresent] = useState(open);
   const [actionConversation, setActionConversation] = useState<KivoNativeConversation | null>(null);
-  const translateX = useRef(new Animated.Value(closedX)).current;
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dragStartXRef = useRef(0);
-  const dragStartYRef = useRef(0);
   const dragStartTimeRef = useRef(0);
   const dragModeRef = useRef<'idle' | 'horizontal' | 'vertical'>('idle');
-
   const recentItems = conversations.length ? conversations.slice(0, 12) : FALLBACK_RECENTS;
+  const translateX = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-drawerWidth - 34, 0],
+  });
 
-  function animateTo(toValue: number, callback?: () => void) {
-    Animated.timing(translateX, {
-      toValue,
-      duration: ANIMATION_MS,
-      easing: undefined,
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) callback?.();
-    });
-  }
-
-  function closeWithMotion() {
-    if (!open) return;
-    triggerHaptic('close');
+  function closeMenu() {
     setActionConversation(null);
-    animateTo(closedX);
     onClose();
   }
 
   function handleNewChat() {
-    triggerHaptic('close');
+    setActionConversation(null);
     onNewChat();
-    closeWithMotion();
   }
 
   function handleOpenConversation(id: string) {
     if (id.startsWith('fallback-')) return;
-    triggerHaptic('close');
+    setActionConversation(null);
     onOpenConversation?.(id);
-    closeWithMotion();
+    onClose();
   }
 
   const panResponder = useMemo(
     () => PanResponder.create({
       onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 10 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.1,
-      onPanResponderGrant: (_, gesture) => {
-        dragStartXRef.current = gesture.x0;
-        dragStartYRef.current = gesture.y0;
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 9 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.08,
+      onPanResponderGrant: () => {
         dragStartTimeRef.current = Date.now();
         dragModeRef.current = 'idle';
-        translateX.stopAnimation();
       },
       onPanResponderMove: (_, gesture) => {
-        const deltaX = gesture.moveX - dragStartXRef.current;
-        const deltaY = gesture.moveY - dragStartYRef.current;
-        const absX = Math.abs(deltaX);
-        const absY = Math.abs(deltaY);
+        const absX = Math.abs(gesture.dx);
+        const absY = Math.abs(gesture.dy);
 
         if (dragModeRef.current === 'idle') {
-          if (absY > 10 && absY > absX * 1.12) {
+          if (absY > 10 && absY > absX * 1.1) {
             dragModeRef.current = 'vertical';
-            translateX.setValue(0);
             return;
           }
-
-          if (deltaX < -10 && absX > absY * 1.18) {
+          if (absX > 10 && absX > absY * 1.1) {
             dragModeRef.current = 'horizontal';
           }
         }
 
         if (dragModeRef.current !== 'horizontal') return;
-        translateX.setValue(Math.min(0, Math.max(closedX, deltaX)));
+        onGestureProgress(clamp(1 + gesture.dx / drawerWidth));
       },
       onPanResponderRelease: (_, gesture) => {
         const elapsed = Math.max(1, Date.now() - dragStartTimeRef.current);
         const velocity = gesture.dx / elapsed;
-        const shouldClose = dragModeRef.current === 'horizontal' && (gesture.dx < -72 || velocity < -0.55);
+        const nextProgress = clamp(1 + gesture.dx / drawerWidth);
+        const shouldStayOpen = nextProgress > 0.72 && velocity > -0.45;
         dragModeRef.current = 'idle';
-
-        if (shouldClose) {
-          closeWithMotion();
-          return;
-        }
-
-        animateTo(0);
+        onGestureEnd(shouldStayOpen);
       },
-      onPanResponderTerminate: () => animateTo(0),
+      onPanResponderTerminate: () => {
+        dragModeRef.current = 'idle';
+        onGestureEnd(true);
+      },
     }),
-    [closedX, open, translateX],
+    [drawerWidth, onGestureEnd, onGestureProgress],
   );
 
-  useEffect(() => {
-    if (open) {
-      if (closeTimerRef.current) {
-        clearTimeout(closeTimerRef.current);
-        closeTimerRef.current = null;
-      }
-      setIsPresent(true);
-      setActionConversation(null);
-      translateX.setValue(closedX);
-      triggerHaptic('open');
-      requestAnimationFrame(() => animateTo(0));
-      return;
-    }
-
-    if (!isPresent) return;
-    setActionConversation(null);
-    animateTo(closedX);
-    closeTimerRef.current = setTimeout(() => {
-      closeTimerRef.current = null;
-      setIsPresent(false);
-    }, ANIMATION_MS + 20);
-
-    return () => {
-      if (closeTimerRef.current) {
-        clearTimeout(closeTimerRef.current);
-        closeTimerRef.current = null;
-      }
-    };
-  }, [closedX, isPresent, open, translateX]);
-
-  if (!isPresent && !open) return null;
+  if (!visible) return null;
 
   return (
     <View style={styles.layer} pointerEvents="box-none">
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Close menu"
-        onPress={closeWithMotion}
+        onPress={closeMenu}
         style={[styles.closeArea, { left: drawerWidth }]}
+        {...panResponder.panHandlers}
       />
 
       <Animated.View
@@ -199,22 +151,18 @@ export function KivoSidebarOverlay({ open, conversations = [], activeConversatio
         ]}
         {...panResponder.panHandlers}
       >
-        <View style={styles.drawerGradient} pointerEvents="none" />
+        <View style={styles.drawerGlow} pointerEvents="none" />
 
         <View style={styles.inner}>
           <View style={styles.header}>
             <Text style={styles.logo}>Kivo</Text>
           </View>
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-            contentContainerStyle={styles.scrollContent}
-          >
+          <ScrollView showsVerticalScrollIndicator={false} bounces={false} contentContainerStyle={styles.scrollContent}>
             <View style={styles.nav}>
-              <MenuItem icon="home" label="Home" active onPress={closeWithMotion} />
-              <MenuItem icon="calendar" label="Today" onPress={closeWithMotion} />
-              <MenuItem icon="file-text" label="Library" onPress={closeWithMotion} />
+              <MenuItem icon="home" label="Home" active onPress={closeMenu} />
+              <MenuItem icon="calendar" label="Today" onPress={closeMenu} />
+              <MenuItem icon="file-text" label="Library" onPress={closeMenu} />
             </View>
 
             <View style={styles.divider} />
@@ -228,7 +176,6 @@ export function KivoSidebarOverlay({ open, conversations = [], activeConversatio
                   onPress={() => handleOpenConversation(item.id)}
                   onLongPress={() => {
                     if (item.id.startsWith('fallback-')) return;
-                    triggerHaptic('action');
                     setActionConversation(item);
                   }}
                 />
@@ -257,11 +204,7 @@ export function KivoSidebarOverlay({ open, conversations = [], activeConversatio
       </Animated.View>
 
       {actionConversation ? (
-        <ConversationActionSheet
-          conversation={actionConversation}
-          bottomInset={insets.bottom}
-          onClose={() => setActionConversation(null)}
-        />
+        <ConversationActionSheet conversation={actionConversation} bottomInset={insets.bottom} onClose={() => setActionConversation(null)} />
       ) : null}
     </View>
   );
@@ -340,19 +283,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRightWidth: StyleSheet.hairlineWidth,
     borderRightColor: 'rgba(0,0,0,0.035)',
-    backgroundColor: 'rgba(243,243,245,0.98)',
+    backgroundColor: 'rgba(243,243,245,0.985)',
     shadowColor: '#0f172a',
-    shadowOpacity: 0.04,
-    shadowRadius: 42,
+    shadowOpacity: 0.045,
+    shadowRadius: 48,
     shadowOffset: { width: 12, height: 0 },
   },
-  drawerGradient: {
+  drawerGlow: {
     position: 'absolute',
     top: 0,
     right: 0,
     left: 0,
-    height: 240,
-    backgroundColor: 'rgba(255,255,255,0.24)',
+    height: 260,
+    backgroundColor: 'rgba(255,255,255,0.28)',
   },
   inner: {
     flex: 1,
