@@ -194,7 +194,7 @@ export function KivoTodayDashboard() {
 const styles = StyleSheet.create({
   wrap: {
     paddingHorizontal: 22,
-    paddingTop: 58,
+    paddingTop: 44,
   },
   heading: {
     alignItems: 'center',
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   subtitle: {
-    marginTop: 8,
+    marginTop: 7,
     color: '#9fA0a7',
     fontSize: 15.5,
     letterSpacing: -0.55,
@@ -238,13 +238,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 14 },
   },
   priorityCard: {
-    marginTop: 24,
+    marginTop: 21,
     paddingHorizontal: 17,
     paddingTop: 14,
     paddingBottom: 12,
   },
   priorityList: {
-    marginTop: 11,
+    marginTop: 10,
   },
   cardHeader: {
     height: 23,
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.48,
   },
   priorityRow: {
-    minHeight: 37,
+    minHeight: 36,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 13,
@@ -298,19 +298,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.043)',
   },
   grid: {
-    marginTop: 10,
+    marginTop: 9,
     flexDirection: 'row',
     gap: 10,
   },
   smallCard: {
     flex: 1,
-    height: 101,
+    height: 99,
     paddingHorizontal: 12,
-    paddingVertical: 13,
+    paddingVertical: 12,
   },
   panel: {
-    marginTop: 10,
-    height: 47,
+    marginTop: 9,
+    height: 46,
     borderRadius: 15,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.035)',
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
   },
   timeline: {
-    marginTop: 13,
+    marginTop: 12,
     flexDirection: 'row',
   },
   timelineContent: {
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     marginTop: 21,
   },
   timelineText: {
-    height: 27,
+    height: 26,
     color: colors.text,
     fontSize: 12.2,
     letterSpacing: -0.25,
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
     color: '#92939a',
   },
   loopList: {
-    marginTop: 10,
+    marginTop: 9,
     gap: 5,
   },
   loopRow: {
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
   },
   actions: {
-    marginTop: 10,
+    marginTop: 9,
     flexDirection: 'row',
     gap: 8,
   },
