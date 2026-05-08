@@ -4,14 +4,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { KivoComposer } from './KivoComposer';
 import { KivoPlusSheet } from './KivoPlusSheet';
+import { KivoSidebarOverlay } from './KivoSidebarOverlay';
 import { KivoTodayDashboard } from './KivoTodayDashboard';
 import { KivoTopBar } from './KivoTopBar';
+
+const sampleConversations = [
+  { id: 'recent-email', title: 'Katso minun viimeisimmät sähköpo...' },
+  { id: 'recent-calendar', title: 'Lisää tapahtuma minun kalenteriin ...' },
+  { id: 'recent-tools', title: 'Mitä työkaluja pystyt käyttämään ja...' },
+  { id: 'recent-image-1', title: 'Mitä näet tässä kuvassa' },
+  { id: 'recent-image-2', title: 'Mitä näet tässä kuvassa' },
+  { id: 'recent-build', title: 'Miten voin tehdä oman sovelluksen' },
+];
 
 export function KivoChatScreen() {
   const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<string[]>([]);
   const [plusOpen, setPlusOpen] = useState(false);
   const [plusExpanded, setPlusExpanded] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const appScale = useRef(new Animated.Value(1)).current;
   const appRadius = useRef(new Animated.Value(0)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -52,6 +63,20 @@ export function KivoChatScreen() {
     setPlusOpen(false);
   }
 
+  function openSidebar() {
+    Keyboard.dismiss();
+    setSidebarOpen(true);
+  }
+
+  function closeSidebar() {
+    setSidebarOpen(false);
+  }
+
+  function startNewChat() {
+    setMessages([]);
+    setSidebarOpen(false);
+  }
+
   return (
     <View style={styles.root}>
       <Animated.View pointerEvents="none" style={[styles.blackBackdrop, { opacity: backdropOpacity }]} />
@@ -66,7 +91,7 @@ export function KivoChatScreen() {
         ]}
       >
         <View style={[styles.topBar, { paddingTop: insets.top + 6 }]}>
-          <KivoTopBar onOpenModes={() => Keyboard.dismiss()} />
+          <KivoTopBar onOpenMenu={openSidebar} onOpenModes={() => Keyboard.dismiss()} />
         </View>
 
         <Pressable style={styles.contentDismissLayer} onPress={Keyboard.dismiss}>
@@ -88,6 +113,14 @@ export function KivoChatScreen() {
 
         <KivoComposer onSubmit={handleSubmit} onOpenPlus={openPlusSheet} />
       </Animated.View>
+
+      <KivoSidebarOverlay
+        open={sidebarOpen}
+        conversations={sampleConversations}
+        activeConversationId={null}
+        onClose={closeSidebar}
+        onNewChat={startNewChat}
+      />
 
       <KivoPlusSheet open={plusOpen} onClose={closePlusSheet} onExpandedChange={setPlusExpanded} />
     </View>
