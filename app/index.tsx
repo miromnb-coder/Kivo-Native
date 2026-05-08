@@ -1,5 +1,5 @@
-import { KivoNativeStarterScreen } from '@/components/KivoNativeStarterScreen';
+import { KivoChatScreen } from '@/components/KivoChatScreen';
 
 export default function Index() {
-  return <KivoNativeStarterScreen />;
+  return <KivoChatScreen />;
 }
