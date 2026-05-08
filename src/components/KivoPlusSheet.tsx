@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 type Props = {
   open: boolean;
   onClose: () => void;
+  onExpandedChange?: (expanded: boolean) => void;
 };
 
 type ActionItem = {
@@ -36,11 +37,16 @@ const connectors: ConnectorItem[] = [
   { title: 'Outlook Mail', initial: 'M' },
 ];
 
-export function KivoPlusSheet({ open, onClose }: Props) {
+export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const [expanded, setExpanded] = useState(false);
   const translateY = useRef(new Animated.Value(height)).current;
+
+  function updateExpanded(nextExpanded: boolean) {
+    setExpanded(nextExpanded);
+    onExpandedChange?.(nextExpanded);
+  }
 
   function springToOpen() {
     Animated.spring(translateY, {
@@ -53,6 +59,7 @@ export function KivoPlusSheet({ open, onClose }: Props) {
   }
 
   function closeWithAnimation() {
+    onExpandedChange?.(false);
     Animated.timing(translateY, {
       toValue: height,
       duration: 210,
@@ -80,21 +87,21 @@ export function KivoPlusSheet({ open, onClose }: Props) {
         }
 
         if (gesture.dy < -42 || gesture.vy < -0.65) {
-          setExpanded(true);
+          updateExpanded(true);
         } else if (expanded && gesture.dy > 58) {
-          setExpanded(false);
+          updateExpanded(false);
         }
 
         springToOpen();
       },
       onPanResponderTerminate: springToOpen,
     }),
-    [expanded, height, translateY],
+    [expanded, height, onExpandedChange, translateY],
   );
 
   useEffect(() => {
     if (!open) return;
-    setExpanded(false);
+    updateExpanded(false);
     translateY.setValue(height);
     springToOpen();
   }, [height, open, translateY]);
