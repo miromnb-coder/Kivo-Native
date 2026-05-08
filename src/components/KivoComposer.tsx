@@ -73,7 +73,7 @@ export function KivoComposer({ onSubmit, onOpenPlus }: Props) {
   const actionEnabled = canSend || keyboardOpen;
 
   return (
-    <Animated.View style={[styles.wrap, { paddingBottom: Math.max(10, insets.bottom - 18), transform: [{ translateY: Animated.multiply(offset, -1) }] }]}>
+    <Animated.View style={[styles.wrap, { paddingBottom: Math.max(18, insets.bottom - 10), transform: [{ translateY: Animated.multiply(offset, -1) }] }]}>
       <View style={styles.composer}>
         <TextInput
           ref={inputRef}
