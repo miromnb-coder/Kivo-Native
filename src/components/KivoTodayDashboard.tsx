@@ -1,5 +1,6 @@
 import { Feather } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/colors';
 
 const priorities = [
@@ -7,6 +8,8 @@ const priorities = [
   ['Review product feedback', 'Customer insights'],
   ['Prepare marketing sync', 'Team alignment'],
 ];
+
+const phrases = ['Here’s your day', 'Your next step is clear', 'Kivo is ready'];
 
 function Circle() {
   return <View style={styles.circle} />;
@@ -19,10 +22,79 @@ function Card({ children, style }: { children: React.ReactNode; style?: object }
 function Header({ icon, title }: { icon: keyof typeof Feather.glyphMap; title: string }) {
   return (
     <View style={styles.cardHeader}>
-      <Feather name={icon} size={15} color={colors.text} />
+      <Feather name={icon} size={15} color={colors.text} strokeWidth={1.8} />
       <Text numberOfLines={1} style={styles.cardTitle}>{title}</Text>
-      <Feather name="chevron-right" size={14} color="#585960" />
+      <Feather name="chevron-right" size={14} color="#585960" strokeWidth={1.85} />
     </View>
+  );
+}
+
+function LivingHeadline() {
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [thinking, setThinking] = useState(true);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(8)).current;
+  const dotOne = useRef(new Animated.Value(0.35)).current;
+  const dotTwo = useRef(new Animated.Value(0.35)).current;
+  const dotThree = useRef(new Animated.Value(0.35)).current;
+
+  useEffect(() => {
+    const animateDot = (dot: Animated.Value, delay: number) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, { toValue: 1, duration: 320, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0.35, duration: 420, useNativeDriver: true }),
+        ]),
+      ).start();
+    };
+
+    animateDot(dotOne, 0);
+    animateDot(dotTwo, 130);
+    animateDot(dotThree, 260);
+
+    const timer = setTimeout(() => {
+      setThinking(false);
+      Animated.parallel([
+        Animated.timing(opacity, { toValue: 1, duration: 760, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 0, duration: 760, useNativeDriver: true }),
+      ]).start();
+    }, 900);
+
+    const interval = setInterval(() => {
+      Animated.parallel([
+        Animated.timing(opacity, { toValue: 0, duration: 260, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: -5, duration: 260, useNativeDriver: true }),
+      ]).start(() => {
+        setPhraseIndex((current) => (current + 1) % phrases.length);
+        translateY.setValue(7);
+        Animated.parallel([
+          Animated.timing(opacity, { toValue: 1, duration: 680, useNativeDriver: true }),
+          Animated.timing(translateY, { toValue: 0, duration: 680, useNativeDriver: true }),
+        ]).start();
+      });
+    }, 7800);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, [dotOne, dotTwo, dotThree, opacity, translateY]);
+
+  if (thinking) {
+    return (
+      <View style={styles.thinkingWrap}>
+        <Animated.View style={[styles.dot, { opacity: dotOne }]} />
+        <Animated.View style={[styles.dot, { opacity: dotTwo }]} />
+        <Animated.View style={[styles.dot, { opacity: dotThree }]} />
+      </View>
+    );
+  }
+
+  return (
+    <Animated.Text style={[styles.title, { opacity, transform: [{ translateY }] }]} numberOfLines={1}>
+      {phrases[phraseIndex]}
+    </Animated.Text>
   );
 }
 
@@ -30,8 +102,7 @@ export function KivoTodayDashboard() {
   return (
     <View style={styles.wrap}>
       <View style={styles.heading}>
-        <View style={styles.dots}><View style={styles.dot} /><View style={styles.dot} /><View style={styles.dot} /></View>
-        <Text style={styles.title}>Here’s your day</Text>
+        <LivingHeadline />
         <Text style={styles.subtitle}>Your day at a glance</Text>
       </View>
 
@@ -102,14 +173,14 @@ export function KivoTodayDashboard() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { paddingHorizontal: 22, paddingTop: 18 },
+  wrap: { paddingHorizontal: 22, paddingTop: 64 },
   heading: { alignItems: 'center' },
-  dots: { height: 14, flexDirection: 'row', gap: 7, marginBottom: 4 },
-  dot: { width: 5.5, height: 5.5, borderRadius: 9, backgroundColor: colors.text, opacity: 0.35 },
-  title: { color: colors.text, fontSize: 30, fontWeight: '700', letterSpacing: -1.9, lineHeight: 34 },
-  subtitle: { marginTop: 10, color: '#a4a5ab', fontSize: 15.5, letterSpacing: -0.55 },
-  card: { borderRadius: 25, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.045)', backgroundColor: 'rgba(255,255,255,0.58)', shadowColor: '#0f172a', shadowOpacity: 0.033, shadowRadius: 30, shadowOffset: { width: 0, height: 14 } },
-  priorityCard: { marginTop: 21, paddingHorizontal: 17, paddingTop: 14, paddingBottom: 12 },
+  thinkingWrap: { height: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  dot: { width: 5.5, height: 5.5, borderRadius: 9, backgroundColor: colors.text },
+  title: { color: colors.text, fontSize: 29, fontWeight: '700', letterSpacing: -1.85, lineHeight: 34, textAlign: 'center' },
+  subtitle: { marginTop: 9, color: '#a4a5ab', fontSize: 15.5, letterSpacing: -0.55 },
+  card: { borderRadius: 25, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.045)', backgroundColor: 'rgba(255,255,255,0.64)', shadowColor: '#0f172a', shadowOpacity: 0.04, shadowRadius: 32, shadowOffset: { width: 0, height: 14 } },
+  priorityCard: { marginTop: 26, paddingHorizontal: 17, paddingTop: 14, paddingBottom: 12 },
   cardHeader: { height: 23, flexDirection: 'row', alignItems: 'center', gap: 8 },
   cardTitle: { flex: 1, color: colors.text, fontSize: 14, fontWeight: '600', letterSpacing: -0.45 },
   priorityRow: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 13, paddingVertical: 4 },
@@ -119,7 +190,7 @@ const styles = StyleSheet.create({
   line: { height: StyleSheet.hairlineWidth, marginLeft: 30, backgroundColor: 'rgba(0,0,0,0.045)' },
   grid: { marginTop: 10, flexDirection: 'row', gap: 10 },
   smallCard: { flex: 1, height: 105, paddingHorizontal: 12, paddingVertical: 13 },
-  panel: { marginTop: 11, height: 50, borderRadius: 15, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.035)', backgroundColor: 'rgba(247,247,248,0.72)', justifyContent: 'center', paddingHorizontal: 11 },
+  panel: { marginTop: 11, height: 50, borderRadius: 15, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.035)', backgroundColor: 'rgba(247,247,248,0.78)', justifyContent: 'center', paddingHorizontal: 11 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   panelTitle: { color: colors.text, fontSize: 12.5, letterSpacing: -0.4 },
   panelSub: { marginTop: 7, color: '#96979f', fontSize: 11.5 },
@@ -132,10 +203,10 @@ const styles = StyleSheet.create({
   timelineText: { height: 27, color: colors.text, fontSize: 12, letterSpacing: -0.25 },
   time: { color: '#92939a' },
   loopList: { marginTop: 11, gap: 5 },
-  loopRow: { height: 26, borderRadius: 11, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.035)', backgroundColor: 'rgba(247,247,248,0.72)', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  loopRow: { height: 26, borderRadius: 11, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.035)', backgroundColor: 'rgba(247,247,248,0.78)', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
   loopText: { flex: 1, color: colors.text, fontSize: 11.5 },
   badge: { minWidth: 18, height: 18, borderRadius: 9, overflow: 'hidden', textAlign: 'center', lineHeight: 18, backgroundColor: '#eeeeef', color: colors.text, fontSize: 10.5 },
   actions: { marginTop: 10, flexDirection: 'row', gap: 8 },
-  action: { flex: 1, height: 34, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.05)', backgroundColor: 'rgba(255,255,255,0.68)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  action: { flex: 1, height: 34, borderRadius: 999, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.05)', backgroundColor: 'rgba(255,255,255,0.78)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   actionText: { color: colors.text, fontSize: 12.5, letterSpacing: -0.42 },
 });
