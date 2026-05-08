@@ -3,17 +3,16 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Keyboard, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
-import { KivoPlusSheet } from './KivoPlusSheet';
 
 type Props = {
   onSubmit?: (message: string) => void;
+  onOpenPlus?: () => void;
 };
 
-export function KivoComposer({ onSubmit }: Props) {
+export function KivoComposer({ onSubmit, onOpenPlus }: Props) {
   const insets = useSafeAreaInsets();
   const [value, setValue] = useState('');
   const [keyboardOpen, setKeyboardOpen] = useState(false);
-  const [plusOpen, setPlusOpen] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const offset = useRef(new Animated.Value(0)).current;
   const canSend = value.trim().length > 0;
@@ -35,7 +34,7 @@ export function KivoComposer({ onSubmit }: Props) {
 
   function openPlusSheet() {
     dismissKeyboard();
-    setPlusOpen(true);
+    onOpenPlus?.();
   }
 
   useEffect(() => {
@@ -74,50 +73,46 @@ export function KivoComposer({ onSubmit }: Props) {
   const actionEnabled = canSend || keyboardOpen;
 
   return (
-    <>
-      <Animated.View style={[styles.wrap, { paddingBottom: Math.max(10, insets.bottom - 18), transform: [{ translateY: Animated.multiply(offset, -1) }] }]}>
-        <View style={styles.composer}>
-          <TextInput
-            ref={inputRef}
-            value={value}
-            onChangeText={setValue}
-            placeholder="Ask anything or assign a task"
-            placeholderTextColor="#a9a9b0"
-            multiline
-            style={styles.input}
-            selectionColor={colors.text}
-            keyboardAppearance="light"
-            textAlignVertical="top"
-          />
-          <View style={styles.controls}>
-            <View style={styles.leftControls}>
-              <CircleButton icon="plus" onPress={openPlusSheet} />
-              <CircleButton icon="sliders" />
-            </View>
-            <View style={styles.rightControls}>
-              <CircleButton icon="message-circle" onPress={dismissKeyboard} />
-              <CircleButton icon="mic" />
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={canSend ? 'Send message' : keyboardOpen ? 'Hide keyboard' : 'Send disabled'}
-                onPress={canSend ? submit : dismissKeyboard}
-                disabled={!actionEnabled}
-                style={({ pressed }) => [
-                  styles.circle,
-                  styles.sendButton,
-                  canSend ? styles.sendActive : styles.sendIdle,
-                  pressed && actionEnabled && styles.pressed,
-                ]}
-              >
-                <Feather name={actionIcon} size={21} color={canSend ? '#ffffff' : '#cfcfd4'} strokeWidth={1.85} />
-              </Pressable>
-            </View>
+    <Animated.View style={[styles.wrap, { paddingBottom: Math.max(10, insets.bottom - 18), transform: [{ translateY: Animated.multiply(offset, -1) }] }]}>
+      <View style={styles.composer}>
+        <TextInput
+          ref={inputRef}
+          value={value}
+          onChangeText={setValue}
+          placeholder="Ask anything or assign a task"
+          placeholderTextColor="#a9a9b0"
+          multiline
+          style={styles.input}
+          selectionColor={colors.text}
+          keyboardAppearance="light"
+          textAlignVertical="top"
+        />
+        <View style={styles.controls}>
+          <View style={styles.leftControls}>
+            <CircleButton icon="plus" onPress={openPlusSheet} />
+            <CircleButton icon="sliders" />
+          </View>
+          <View style={styles.rightControls}>
+            <CircleButton icon="message-circle" onPress={dismissKeyboard} />
+            <CircleButton icon="mic" />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={canSend ? 'Send message' : keyboardOpen ? 'Hide keyboard' : 'Send disabled'}
+              onPress={canSend ? submit : dismissKeyboard}
+              disabled={!actionEnabled}
+              style={({ pressed }) => [
+                styles.circle,
+                styles.sendButton,
+                canSend ? styles.sendActive : styles.sendIdle,
+                pressed && actionEnabled && styles.pressed,
+              ]}
+            >
+              <Feather name={actionIcon} size={21} color={canSend ? '#ffffff' : '#cfcfd4'} strokeWidth={1.85} />
+            </Pressable>
           </View>
         </View>
-      </Animated.View>
-
-      <KivoPlusSheet open={plusOpen} onClose={() => setPlusOpen(false)} />
-    </>
+      </View>
+    </Animated.View>
   );
 }
 
