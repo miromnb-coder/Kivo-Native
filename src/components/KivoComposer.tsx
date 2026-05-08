@@ -74,10 +74,12 @@ export function KivoComposer({ onSubmit }: Props) {
           value={value}
           onChangeText={setValue}
           placeholder="Ask anything or assign a task"
-          placeholderTextColor="#a7a7ad"
+          placeholderTextColor="#a8a8af"
           multiline
           style={styles.input}
           selectionColor={colors.text}
+          keyboardAppearance="light"
+          textAlignVertical="top"
         />
         <View style={styles.controls}>
           <View style={styles.leftControls}>
@@ -88,11 +90,18 @@ export function KivoComposer({ onSubmit }: Props) {
             <CircleButton icon="message-circle" onPress={dismissKeyboard} />
             <CircleButton icon="mic" />
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={canSend ? 'Send message' : keyboardOpen ? 'Hide keyboard' : 'Send disabled'}
               onPress={canSend ? submit : dismissKeyboard}
               disabled={!actionEnabled}
-              style={[styles.circle, canSend ? styles.sendActive : styles.sendIdle]}
+              style={({ pressed }) => [
+                styles.circle,
+                styles.sendButton,
+                canSend ? styles.sendActive : styles.sendIdle,
+                pressed && actionEnabled && styles.pressed,
+              ]}
             >
-              <Feather name={actionIcon} size={22} color={canSend ? '#ffffff' : '#cfcfd4'} strokeWidth={1.8} />
+              <Feather name={actionIcon} size={22} color={canSend ? '#ffffff' : '#cfcfd4'} strokeWidth={1.85} />
             </Pressable>
           </View>
         </View>
@@ -103,8 +112,13 @@ export function KivoComposer({ onSubmit }: Props) {
 
 function CircleButton({ icon, onPress }: { icon: keyof typeof Feather.glyphMap; onPress?: () => void }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.circle, styles.controlCircle, pressed && styles.pressed]}>
-      <Feather name={icon} size={20} color={colors.text} strokeWidth={1.7} />
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      hitSlop={8}
+      style={({ pressed }) => [styles.circle, styles.controlCircle, pressed && styles.pressed]}
+    >
+      <Feather name={icon} size={21} color={colors.text} strokeWidth={1.75} />
     </Pressable>
   );
 }
@@ -118,30 +132,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   composer: {
+    minHeight: 142,
     borderRadius: 34,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#eeeef1',
-    backgroundColor: '#f9f9fa',
+    borderColor: 'rgba(0,0,0,0.035)',
+    backgroundColor: '#fbfbfc',
     paddingHorizontal: 16,
-    paddingTop: 14,
+    paddingTop: 16,
     paddingBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 10 },
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.045,
+    shadowRadius: 34,
+    shadowOffset: { width: 0, height: 18 },
   },
   input: {
-    minHeight: 24,
-    maxHeight: 96,
+    minHeight: 28,
+    maxHeight: 92,
     paddingHorizontal: 4,
-    paddingVertical: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
     color: colors.text,
-    fontSize: 17,
+    fontSize: 17.5,
     lineHeight: 24,
-    letterSpacing: -0.35,
+    letterSpacing: -0.42,
   },
   controls: {
-    marginTop: 14,
+    marginTop: 15,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -163,11 +179,14 @@ const styles = StyleSheet.create({
   },
   controlCircle: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#e9e9ec',
-    backgroundColor: '#f9f9fa',
+    borderColor: 'rgba(0,0,0,0.055)',
+    backgroundColor: '#fbfbfc',
+  },
+  sendButton: {
+    marginLeft: 1,
   },
   sendIdle: {
-    backgroundColor: '#eeeeef',
+    backgroundColor: '#efeff1',
   },
   sendActive: {
     backgroundColor: colors.text,
