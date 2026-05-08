@@ -149,16 +149,21 @@ export function KivoSidebarOverlay({
             transform: [{ translateX }],
           },
         ]}
-        {...panResponder.panHandlers}
       >
-        <View style={styles.drawerGlow} pointerEvents="none" />
-
         <View style={styles.inner}>
           <View style={styles.header}>
             <Text style={styles.logo}>Kivo</Text>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} bounces={false} contentContainerStyle={styles.scrollContent}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            alwaysBounceVertical={false}
+            keyboardShouldPersistTaps="handled"
+            directionalLockEnabled
+            scrollEventThrottle={16}
+            contentContainerStyle={styles.scrollContent}
+          >
             <View style={styles.nav}>
               <MenuItem icon="home" label="Home" active onPress={closeMenu} />
               <MenuItem icon="calendar" label="Today" onPress={closeMenu} />
@@ -201,6 +206,8 @@ export function KivoSidebarOverlay({
             </Pressable>
           </View>
         </View>
+
+        <View pointerEvents="box-only" style={styles.drawerGestureEdge} {...panResponder.panHandlers} />
       </Animated.View>
 
       {actionConversation ? (
@@ -283,22 +290,23 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRightWidth: StyleSheet.hairlineWidth,
     borderRightColor: 'rgba(0,0,0,0.035)',
-    backgroundColor: 'rgba(243,243,245,0.985)',
+    backgroundColor: '#f4f4f6',
     shadowColor: '#0f172a',
-    shadowOpacity: 0.045,
-    shadowRadius: 48,
+    shadowOpacity: 0.042,
+    shadowRadius: 44,
     shadowOffset: { width: 12, height: 0 },
   },
-  drawerGlow: {
+  drawerGestureEdge: {
     position: 'absolute',
     top: 0,
     right: 0,
-    left: 0,
-    height: 260,
-    backgroundColor: 'rgba(255,255,255,0.28)',
+    bottom: 0,
+    width: 28,
+    backgroundColor: 'transparent',
   },
   inner: {
     flex: 1,
+    backgroundColor: '#f4f4f6',
   },
   header: {
     height: 56,
@@ -316,7 +324,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 36,
     paddingTop: 32,
-    paddingBottom: 22,
+    paddingBottom: 42,
   },
   nav: {
     gap: 18,
@@ -376,6 +384,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 16,
+    backgroundColor: '#f4f4f6',
   },
   profilePill: {
     width: 138,
