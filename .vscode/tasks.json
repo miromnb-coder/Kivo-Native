@@ -2,6 +2,73 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "1) Stop old Expo tunnels",
+      "type": "shell",
+      "command": "npm run dev:stop",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": false
+      }
+    },
+    {
+      "label": "2) Phone Expo Tunnel Fresh",
+      "type": "shell",
+      "command": "npm run phone",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "Expo Tunnel 8081",
+      "type": "shell",
+      "command": "npm run tunnel:8081",
+      "group": "test",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "Expo Tunnel 8082",
+      "type": "shell",
+      "command": "npm run tunnel:8082",
+      "group": "test",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "Expo Tunnel 8083",
+      "type": "shell",
+      "command": "npm run tunnel:8083",
+      "group": "test",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
       "label": "Install dependencies",
       "type": "shell",
       "command": "npm i",
@@ -17,10 +84,7 @@
       "label": "Expo Tunnel - open on phone",
       "type": "shell",
       "command": "npm run tunnel",
-      "group": {
-        "kind": "test",
-        "isDefault": true
-      },
+      "group": "test",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {
