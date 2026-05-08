@@ -1,0 +1,55 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Install dependencies",
+      "type": "shell",
+      "command": "npm i",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": false
+      }
+    },
+    {
+      "label": "Start Expo tunnel",
+      "type": "shell",
+      "command": "npx expo start --tunnel",
+      "group": "test",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": false
+      }
+    },
+    {
+      "label": "Start Expo tunnel clean",
+      "type": "shell",
+      "command": "npx expo start --tunnel --clear",
+      "group": "test",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": false
+      }
+    },
+    {
+      "label": "Typecheck",
+      "type": "shell",
+      "command": "npm run typecheck",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": false
+      }
+    }
+  ]
+}
