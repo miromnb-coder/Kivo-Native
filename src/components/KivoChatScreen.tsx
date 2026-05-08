@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Keyboard, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { KivoComposer } from './KivoComposer';
@@ -22,20 +22,22 @@ export function KivoChatScreen() {
         <KivoTopBar onOpenModes={() => Keyboard.dismiss()} />
       </View>
 
-      {messages.length === 0 ? (
-        <KivoTodayDashboard />
-      ) : (
-        <View style={[styles.chatPreview, { paddingTop: insets.top + 86 }]}>
-          {messages.map((message, index) => (
-            <View key={`${message}-${index}`} style={styles.userBubble}>
-              <Text style={styles.userBubbleText}>{message}</Text>
+      <Pressable style={styles.contentDismissLayer} onPress={Keyboard.dismiss}>
+        {messages.length === 0 ? (
+          <KivoTodayDashboard />
+        ) : (
+          <View style={[styles.chatPreview, { paddingTop: insets.top + 86 }]}>
+            {messages.map((message, index) => (
+              <View key={`${message}-${index}`} style={styles.userBubble}>
+                <Text style={styles.userBubbleText}>{message}</Text>
+              </View>
+            ))}
+            <View style={styles.assistantBubble}>
+              <Text style={styles.assistantText}>Kivo is ready. Native agent streaming will connect here next.</Text>
             </View>
-          ))}
-          <View style={styles.assistantBubble}>
-            <Text style={styles.assistantText}>Kivo Native shell is ready. Agent streaming will be connected later.</Text>
           </View>
-        </View>
-      )}
+        )}
+      </Pressable>
 
       <KivoComposer onSubmit={handleSubmit} />
     </View>
@@ -69,6 +71,9 @@ const styles = StyleSheet.create({
   topBar: {
     zIndex: 20,
   },
+  contentDismissLayer: {
+    flex: 1,
+  },
   chatPreview: {
     flex: 1,
     paddingHorizontal: 18,
@@ -93,7 +98,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     maxWidth: '86%',
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.74)',
+    backgroundColor: 'rgba(255,255,255,0.78)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.045)',
     paddingHorizontal: 15,
