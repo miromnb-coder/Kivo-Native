@@ -23,18 +23,20 @@ export function KivoTopBar({ onOpenMenu, onOpenModes, onOpenMore }: Props) {
         </View>
       </Pressable>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Open Kivo selector"
-        onPress={onOpenModes}
-        style={({ pressed }) => [styles.kivoPill, pressed && styles.pressedPill]}
-      >
-        <Text style={styles.sparkle}>✦</Text>
-        <Text style={styles.kivoText}>Kivo</Text>
-        <View style={styles.chevronCircle}>
-          <Feather name="chevron-down" size={12} color="#19191c" strokeWidth={2.5} />
-        </View>
-      </Pressable>
+      <View pointerEvents="box-none" style={styles.centerSlot}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open Kivo selector"
+          onPress={onOpenModes}
+          style={({ pressed }) => [styles.kivoPill, pressed && styles.pressedPill]}
+        >
+          <Text style={styles.sparkle}>✦</Text>
+          <Text style={styles.kivoText}>Kivo</Text>
+          <View style={styles.chevronCircle}>
+            <Feather name="chevron-down" size={12} color="#19191c" strokeWidth={2.5} />
+          </View>
+        </Pressable>
+      </View>
 
       <Pressable
         accessibilityRole="button"
@@ -50,6 +52,7 @@ export function KivoTopBar({ onOpenMenu, onOpenModes, onOpenMore }: Props) {
 
 const styles = StyleSheet.create({
   header: {
+    position: 'relative',
     height: 54,
     paddingHorizontal: 30,
     flexDirection: 'row',
@@ -57,19 +60,28 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: 'transparent',
   },
+  centerSlot: {
+    position: 'absolute',
+    top: 2,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 2,
+  },
   iconButton: {
     width: 34,
     height: 34,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 999,
+    zIndex: 3,
   },
   pressedMenu: {
     transform: [{ scale: 0.96 }],
     opacity: 0.84,
   },
   pressedPill: {
-    transform: [{ translateX: -54 }, { scale: 0.98 }],
+    transform: [{ scale: 0.98 }],
     opacity: 0.9,
   },
   morePressed: {
@@ -95,9 +107,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.text,
   },
   kivoPill: {
-    position: 'absolute',
-    left: '50%',
-    top: 2,
     height: 40,
     minWidth: 108,
     paddingLeft: 15,
@@ -112,7 +121,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.045,
     shadowRadius: 32,
     shadowOffset: { width: 0, height: 12 },
-    transform: [{ translateX: -54 }],
   },
   sparkle: {
     fontSize: 9.5,
