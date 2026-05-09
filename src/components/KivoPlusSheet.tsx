@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KivoConnectorDetailView, type NativeConnector } from './KivoConnectorDetailView';
 
@@ -19,6 +19,8 @@ type ActionItem = {
 type ConnectorItem = NativeConnector & {
   id: string;
 };
+
+type SheetSnap = 'peek' | 'expanded' | 'closed';
 
 const actions: ActionItem[] = [
   { title: 'Add files', icon: 'folder-plus' },
@@ -74,13 +76,25 @@ const connectors: ConnectorItem[] = [
   },
 ];
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
+  const peekHeight = Math.min(height * 0.78, Math.max(520, height - 118));
+  const expandedHeight = height - Math.max(insets.top + 10, 48);
   const [expanded, setExpanded] = useState(false);
   const [selectedConnector, setSelectedConnector] = useState<ConnectorItem | null>(null);
   const expandedRef = useRef(false);
+  const scrollYRef = useRef(0);
+  const sheetHeight = useRef(new Animated.Value(peekHeight)).current;
   const translateY = useRef(new Animated.Value(height)).current;
+  const currentHeightRef = useRef(peekHeight);
+  const currentTranslateRef = useRef(height);
+  const gestureStartHeightRef = useRef(peekHeight);
+  const gestureModeRef = useRef<'idle' | 'sheet' | 'scroll'>('idle');
 
   function updateExpanded(nextExpanded: boolean) {
     if (expandedRef.current === nextExpanded) return;
@@ -89,63 +103,136 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
     onExpandedChange?.(nextExpanded);
   }
 
-  function springToOpen() {
-    Animated.spring(translateY, {
-      toValue: 0,
-      damping: 24,
-      stiffness: 210,
-      mass: 0.78,
-      useNativeDriver: true,
-    }).start();
+  function setSheetHeight(nextHeight: number) {
+    const clamped = clamp(nextHeight, peekHeight, expandedHeight);
+    currentHeightRef.current = clamped;
+    sheetHeight.setValue(clamped);
+  }
+
+  function setSheetTranslate(nextTranslate: number) {
+    const clamped = clamp(nextTranslate, 0, height + 40);
+    currentTranslateRef.current = clamped;
+    translateY.setValue(clamped);
+  }
+
+  function animateToSnap(snap: SheetSnap) {
+    if (snap === 'closed') {
+      updateExpanded(false);
+      setSelectedConnector(null);
+      Animated.timing(translateY, {
+        toValue: height + 40,
+        duration: 220,
+        easing: Easing.bezier(0.28, 0.92, 0.36, 1),
+        useNativeDriver: false,
+      }).start(({ finished }) => {
+        if (finished) {
+          currentTranslateRef.current = height + 40;
+          onClose();
+        }
+      });
+      return;
+    }
+
+    const nextExpanded = snap === 'expanded';
+    const nextHeight = nextExpanded ? expandedHeight : peekHeight;
+    updateExpanded(nextExpanded);
+
+    Animated.parallel([
+      Animated.spring(sheetHeight, {
+        toValue: nextHeight,
+        damping: 25,
+        stiffness: 225,
+        mass: 0.84,
+        useNativeDriver: false,
+      }),
+      Animated.spring(translateY, {
+        toValue: 0,
+        damping: 25,
+        stiffness: 225,
+        mass: 0.84,
+        useNativeDriver: false,
+      }),
+    ]).start(({ finished }) => {
+      if (!finished) return;
+      currentHeightRef.current = nextHeight;
+      currentTranslateRef.current = 0;
+    });
   }
 
   function closeWithAnimation() {
-    updateExpanded(false);
-    setSelectedConnector(null);
-    Animated.timing(translateY, {
-      toValue: height,
-      duration: 210,
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) onClose();
-    });
+    animateToSnap('closed');
   }
 
   const panResponder = useMemo(
     () => PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 2,
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gesture) => {
+        const mostlyVertical = Math.abs(gesture.dy) > Math.abs(gesture.dx) * 1.08;
+        if (!mostlyVertical || Math.abs(gesture.dy) < 4) return false;
+
+        if (!expandedRef.current) return true;
+        return scrollYRef.current <= 1 && gesture.dy > 6;
+      },
       onPanResponderGrant: () => {
-        translateY.stopAnimation();
+        gestureModeRef.current = 'sheet';
+        gestureStartHeightRef.current = currentHeightRef.current;
+        sheetHeight.stopAnimation((value) => {
+          currentHeightRef.current = value;
+          gestureStartHeightRef.current = value;
+        });
+        translateY.stopAnimation((value) => {
+          currentTranslateRef.current = value;
+        });
       },
       onPanResponderMove: (_, gesture) => {
+        if (gestureModeRef.current !== 'sheet') return;
+
+        const startHeight = gestureStartHeightRef.current;
+
         if (gesture.dy < 0) {
-          if (gesture.dy < -28) updateExpanded(true);
-          const softPull = Math.max(gesture.dy, -92) * 0.72;
-          translateY.setValue(softPull);
+          setSheetTranslate(0);
+          setSheetHeight(startHeight - gesture.dy);
+          if (startHeight - gesture.dy > expandedHeight - 42) updateExpanded(true);
           return;
         }
 
-        if (expandedRef.current && gesture.dy > 54) updateExpanded(false);
-        translateY.setValue(gesture.dy);
+        if (startHeight > peekHeight + 1) {
+          const nextHeight = Math.max(peekHeight, startHeight - gesture.dy);
+          setSheetHeight(nextHeight);
+
+          const overflow = Math.max(0, gesture.dy - (startHeight - peekHeight));
+          setSheetTranslate(overflow);
+          if (nextHeight < expandedHeight - 64) updateExpanded(false);
+          return;
+        }
+
+        setSheetHeight(peekHeight);
+        setSheetTranslate(gesture.dy);
       },
       onPanResponderRelease: (_, gesture) => {
-        if (gesture.dy > 126 || gesture.vy > 0.9) {
-          closeWithAnimation();
+        gestureModeRef.current = 'idle';
+        const heightNow = currentHeightRef.current;
+        const translateNow = currentTranslateRef.current;
+        const middle = peekHeight + (expandedHeight - peekHeight) * 0.45;
+
+        if (translateNow > 130 || gesture.vy > 1.05) {
+          animateToSnap('closed');
           return;
         }
 
-        if (gesture.dy < -22 || gesture.vy < -0.38) {
-          updateExpanded(true);
-        } else if (expandedRef.current && gesture.dy > 46) {
-          updateExpanded(false);
+        if (gesture.vy < -0.42 || heightNow > middle) {
+          animateToSnap('expanded');
+          return;
         }
 
-        springToOpen();
+        animateToSnap('peek');
       },
-      onPanResponderTerminate: springToOpen,
+      onPanResponderTerminate: () => {
+        gestureModeRef.current = 'idle';
+        animateToSnap(currentHeightRef.current > peekHeight + (expandedHeight - peekHeight) * 0.5 ? 'expanded' : 'peek');
+      },
     }),
-    [height, translateY],
+    [expandedHeight, height, peekHeight, sheetHeight, translateY],
   );
 
   useEffect(() => {
@@ -154,9 +241,13 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
     setExpanded(false);
     setSelectedConnector(null);
     onExpandedChange?.(false);
-    translateY.setValue(height);
-    springToOpen();
-  }, [height, onExpandedChange, open, translateY]);
+    scrollYRef.current = 0;
+    currentHeightRef.current = peekHeight;
+    currentTranslateRef.current = height + 40;
+    sheetHeight.setValue(peekHeight);
+    translateY.setValue(height + 40);
+    requestAnimationFrame(() => animateToSnap('peek'));
+  }, [height, onExpandedChange, open, peekHeight, sheetHeight, translateY]);
 
   if (!open) return null;
 
@@ -168,19 +259,30 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
         style={[
           styles.sheet,
           {
-            maxHeight: height * (expanded ? 0.92 : 0.79),
+            height: sheetHeight,
             paddingBottom: insets.bottom + 22,
             transform: [{ translateY }],
           },
         ]}
+        {...panResponder.panHandlers}
       >
-        <View style={styles.handleWrap} {...panResponder.panHandlers}>
+        <View style={styles.handleWrap}>
           <View style={styles.handleHitArea}>
             <View style={styles.handle} />
           </View>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} bounces={false} contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          scrollEnabled={expanded}
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16}
+          onScroll={(event) => {
+            scrollYRef.current = event.nativeEvent.contentOffset.y;
+          }}
+          contentContainerStyle={styles.scrollContent}
+        >
           <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false} contentContainerStyle={styles.previewRow}>
             <PreviewTile large />
             <PreviewTile />
@@ -316,7 +418,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#c4c4c9',
   },
   scrollContent: {
-    paddingBottom: 2,
+    paddingBottom: 30,
   },
   previewRow: {
     gap: 18,
