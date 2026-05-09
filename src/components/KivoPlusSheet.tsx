@@ -338,6 +338,13 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
           }}
           contentContainerStyle={styles.scrollContent}
         >
+          <View style={styles.photoHeader}>
+            <Text style={styles.photoHeaderTitle}>Kivo</Text>
+            <Pressable style={({ pressed }) => [styles.photoHeaderActionWrap, pressed && styles.pressed]} onPress={loadRecentPhotos}>
+              <Text style={styles.photoHeaderAction}>All photos</Text>
+            </Pressable>
+          </View>
+
           <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false} contentContainerStyle={styles.previewRow}>
             <PreviewTile large permission={photoPermission} onPress={loadRecentPhotos} />
             {recentPhotos.length > 0 ? (
@@ -487,6 +494,30 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 30,
+  },
+  photoHeader: {
+    marginTop: 2,
+    marginBottom: 14,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  photoHeaderTitle: {
+    color: '#17181b',
+    fontSize: 24,
+    fontWeight: '600',
+    letterSpacing: -0.95,
+  },
+  photoHeaderActionWrap: {
+    minHeight: 32,
+    justifyContent: 'center',
+  },
+  photoHeaderAction: {
+    color: '#007aff',
+    fontSize: 21,
+    fontWeight: '400',
+    letterSpacing: -0.7,
   },
   previewRow: {
     gap: 18,
