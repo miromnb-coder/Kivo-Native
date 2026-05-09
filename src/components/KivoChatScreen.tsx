@@ -3,6 +3,15 @@ import { Animated, Easing, Image, Keyboard, PanResponder, ScrollView, StyleSheet
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { askKivoAi } from '../lib/kivo-ai';
+import {
+  createConversationTitle,
+  createKivoConversation,
+  listKivoConversations,
+  loadKivoConversationMessages,
+  saveKivoMessage,
+  type KivoConversationSummary,
+  type KivoStoredMessage,
+} from '../lib/kivo-history';
 import { KivoComposer } from './KivoComposer';
 import { KivoPlusSheet, type RecentPhoto } from './KivoPlusSheet';
 import { KivoSidebarOverlay } from './KivoSidebarOverlay';
@@ -22,17 +31,6 @@ type TableBlock = {
   header: string[];
   rows: string[][];
 };
-
-const sampleConversations = [
-  { id: 'recent-email', title: 'Katso minun viimeisimmät sähköpo...' },
-  { id: 'recent-calendar', title: 'Lisää tapahtuma minun kalenteriin ...' },
-  { id: 'recent-tools', title: 'Mitä työkaluja pystyt käyttämään ja...' },
-  { id: 'recent-image-1', title: 'Mitä näet tässä kuvassa' },
-  { id: 'recent-image-2', title: 'Mitä näet tässä kuvassa' },
-  { id: 'recent-build', title: 'Miten voin tehdä oman sovelluksen' },
-  { id: 'recent-sidebar', title: 'Viimeistellään sivuvalikko täysin' },
-  { id: 'recent-native', title: 'Tee Kivo native näkymä valmiiksi' },
-];
 
 function clamp(value: number, min = 0, max = 1) {
   return Math.min(max, Math.max(min, value));
@@ -56,6 +54,15 @@ function parseTable(lines: string[]): TableBlock | null {
 
   const [header, ...rows] = cleanRows;
   return { header, rows };
+}
+
+function storedMessageToChatMessage(message: KivoStoredMessage): ChatMessage {
+  return {
+    id: message.id,
+    role: message.role,
+    text: message.text,
+    photo: message.photo,
+  };
 }
 
 function renderInlineText(text: string, keyPrefix: string, style = styles.assistantText) {
@@ -242,6 +249,8 @@ export function KivoChatScreen() {
   const drawerWidth = Math.min(width * 0.86, 372);
   const pushedDistance = drawerWidth - 8;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [conversations, setConversations] = useState<KivoConversationSummary[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<RecentPhoto | null>(null);
   const [assistantThinking, setAssistantThinking] = useState(false);
   const [plusOpen, setPlusOpen] = useState(false);
@@ -269,7 +278,8 @@ export function KivoChatScreen() {
   const responseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
-  const shouldShowTodayDashboard = messages.length === 0 && !composerActive && !plusOpen;
+  const conversationLoadIdRef = useRef(0);
+  const shouldShowTodayDashboard = messages.length === 0 && !activeConversationId && !composerActive && !plusOpen;
 
   const chatTranslateX = sidebarProgress.interpolate({
     inputRange: [0, 1],
@@ -307,6 +317,19 @@ export function KivoChatScreen() {
     }, 42);
   }
 
+  function upsertConversation(conversation: KivoConversationSummary) {
+    setConversations((current) => [conversation, ...current.filter((item) => item.id !== conversation.id)].slice(0, 24));
+  }
+
+  async function refreshConversations() {
+    const nextConversations = await listKivoConversations();
+    setConversations(nextConversations);
+  }
+
+  useEffect(() => {
+    refreshConversations();
+  }, []);
+
   useEffect(() => {
     const listener = sidebarProgress.addListener(({ value }) => {
       sidebarProgressRef.current = value;
@@ -328,6 +351,7 @@ export function KivoChatScreen() {
       if (responseTimerRef.current) clearTimeout(responseTimerRef.current);
       if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
       requestIdRef.current += 1;
+      conversationLoadIdRef.current += 1;
     };
   }, []);
 
@@ -426,6 +450,8 @@ export function KivoChatScreen() {
       .slice(-10)
       .map((item) => ({ role: item.role, content: item.text }));
     const requestId = requestIdRef.current + 1;
+    const existingConversationId = activeConversationId;
+    const conversationTitle = createConversationTitle(message, Boolean(photoForMessage));
 
     requestIdRef.current = requestId;
     shouldStickToBottomRef.current = true;
@@ -437,6 +463,17 @@ export function KivoChatScreen() {
     setAssistantThinking(true);
     scrollChatToEnd(true, true);
 
+    const conversation = existingConversationId
+      ? conversations.find((item) => item.id === existingConversationId) ?? { id: existingConversationId, title: conversationTitle }
+      : await createKivoConversation(conversationTitle);
+
+    if (!existingConversationId) {
+      setActiveConversationId(conversation.id);
+      upsertConversation(conversation);
+    }
+
+    await saveKivoMessage(conversation.id, userMessage);
+
     const startedAt = Date.now();
     const answer = await askKivoAi({
       message,
@@ -446,20 +483,43 @@ export function KivoChatScreen() {
     const elapsed = Date.now() - startedAt;
     const delay = Math.max(0, 520 - elapsed);
 
-    responseTimerRef.current = setTimeout(() => {
+    responseTimerRef.current = setTimeout(async () => {
       if (requestIdRef.current !== requestId) return;
 
+      const assistantMessage: ChatMessage = {
+        id: `${Date.now()}-${messages.length + 1}-assistant`,
+        role: 'assistant',
+        text: answer,
+      };
+
       setAssistantThinking(false);
-      setMessages((current) => [
-        ...current,
-        {
-          id: `${Date.now()}-${current.length}-assistant`,
-          role: 'assistant',
-          text: answer,
-        },
-      ]);
+      setMessages((current) => [...current, assistantMessage]);
       scrollChatToEnd(true);
+      await saveKivoMessage(conversation.id, assistantMessage);
+      await refreshConversations();
     }, delay);
+  }
+
+  async function openConversation(conversationId: string) {
+    const loadId = conversationLoadIdRef.current + 1;
+    conversationLoadIdRef.current = loadId;
+    requestIdRef.current += 1;
+
+    if (responseTimerRef.current) clearTimeout(responseTimerRef.current);
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+
+    shouldStickToBottomRef.current = true;
+    setAssistantThinking(false);
+    setSelectedPhoto(null);
+    setComposerActive(false);
+    setActiveConversationId(conversationId);
+    setMessages([]);
+
+    const storedMessages = await loadKivoConversationMessages(conversationId);
+    if (conversationLoadIdRef.current !== loadId) return;
+
+    setMessages(storedMessages.map(storedMessageToChatMessage));
+    scrollChatToEnd(false, true);
   }
 
   function openPlusSheet() {
@@ -484,6 +544,7 @@ export function KivoChatScreen() {
     setComposerActive(false);
     setPlusExpanded(false);
     setPlusOpen(false);
+    refreshConversations();
     animateSidebar(1);
   }
 
@@ -495,12 +556,15 @@ export function KivoChatScreen() {
     if (responseTimerRef.current) clearTimeout(responseTimerRef.current);
     if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
     requestIdRef.current += 1;
+    conversationLoadIdRef.current += 1;
     shouldStickToBottomRef.current = true;
     setAssistantThinking(false);
     setMessages([]);
     setSelectedPhoto(null);
+    setActiveConversationId(null);
     setComposerActive(false);
     animateSidebar(0);
+    refreshConversations();
   }
 
   const screenPanResponder = useMemo(
@@ -562,10 +626,11 @@ export function KivoChatScreen() {
         visible={sidebarVisible}
         progress={sidebarProgress}
         drawerWidth={drawerWidth}
-        conversations={sampleConversations}
-        activeConversationId={null}
+        conversations={conversations}
+        activeConversationId={activeConversationId}
         onClose={closeSidebar}
         onNewChat={startNewChat}
+        onOpenConversation={openConversation}
         onGestureProgress={setSidebarGestureProgress}
         onGestureEnd={endSidebarGesture}
       />
@@ -592,7 +657,7 @@ export function KivoChatScreen() {
               pointerEvents={shouldShowTodayDashboard ? 'auto' : 'none'}
               style={[styles.dashboardMotion, { opacity: dashboardOpacity, transform: [{ translateY: dashboardTranslateY }] }]}
             >
-              <KivoTodayDashboard />
+              {shouldShowTodayDashboard ? <KivoTodayDashboard /> : null}
             </Animated.View>
           ) : (
             <ScrollView
