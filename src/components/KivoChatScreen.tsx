@@ -1,14 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Keyboard, PanResponder, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, Image, Keyboard, PanResponder, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { KivoComposer } from './KivoComposer';
-import { KivoPlusSheet } from './KivoPlusSheet';
+import { KivoPlusSheet, type RecentPhoto } from './KivoPlusSheet';
 import { KivoSidebarOverlay } from './KivoSidebarOverlay';
 import { KivoTodayDashboard } from './KivoTodayDashboard';
 import { KivoTopBar } from './KivoTopBar';
 
 const SIDEBAR_BACKGROUND = '#f4f4f6';
+
+type ChatMessage = {
+  id: string;
+  text: string;
+  photo?: RecentPhoto | null;
+};
 
 const sampleConversations = [
   { id: 'recent-email', title: 'Katso minun viimeisimmät sähköpo...' },
@@ -30,7 +36,8 @@ export function KivoChatScreen() {
   const { width } = useWindowDimensions();
   const drawerWidth = Math.min(width * 0.86, 372);
   const pushedDistance = drawerWidth - 8;
-  const [messages, setMessages] = useState<string[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [selectedPhoto, setSelectedPhoto] = useState<RecentPhoto | null>(null);
   const [plusOpen, setPlusOpen] = useState(false);
   const [plusExpanded, setPlusExpanded] = useState(false);
   const [composerActive, setComposerActive] = useState(false);
@@ -157,7 +164,16 @@ export function KivoChatScreen() {
   }
 
   function handleSubmit(message: string) {
-    setMessages((current) => [...current, message]);
+    const photoForMessage = selectedPhoto;
+    setMessages((current) => [
+      ...current,
+      {
+        id: `${Date.now()}-${current.length}`,
+        text: message,
+        photo: photoForMessage,
+      },
+    ]);
+    setSelectedPhoto(null);
     setComposerActive(false);
   }
 
@@ -171,6 +187,11 @@ export function KivoChatScreen() {
   function closePlusSheet() {
     setPlusExpanded(false);
     setPlusOpen(false);
+  }
+
+  function handleSelectPhoto(photo: RecentPhoto) {
+    setSelectedPhoto(photo);
+    setComposerActive(true);
   }
 
   function openSidebar() {
@@ -187,6 +208,7 @@ export function KivoChatScreen() {
 
   function startNewChat() {
     setMessages([]);
+    setSelectedPhoto(null);
     setComposerActive(false);
     animateSidebar(0);
   }
@@ -284,9 +306,10 @@ export function KivoChatScreen() {
             </Animated.View>
           ) : (
             <View style={[styles.chatPreview, { paddingTop: insets.top + 86 }]}>
-              {messages.map((message, index) => (
-                <View key={`${message}-${index}`} style={styles.userBubble}>
-                  <Text style={styles.userBubbleText}>{message}</Text>
+              {messages.map((message) => (
+                <View key={message.id} style={styles.userBubble}>
+                  {message.photo ? <Image source={{ uri: message.photo.uri }} style={styles.userBubbleImage} resizeMode="cover" /> : null}
+                  {message.text ? <Text style={styles.userBubbleText}>{message.text}</Text> : null}
                 </View>
               ))}
               <View style={styles.assistantBubble}>
@@ -296,10 +319,16 @@ export function KivoChatScreen() {
           )}
         </Pressable>
 
-        <KivoComposer onSubmit={handleSubmit} onOpenPlus={openPlusSheet} onComposingChange={setComposerActive} />
+        <KivoComposer
+          onSubmit={handleSubmit}
+          onOpenPlus={openPlusSheet}
+          onComposingChange={setComposerActive}
+          selectedPhoto={selectedPhoto}
+          onRemovePhoto={() => setSelectedPhoto(null)}
+        />
       </Animated.View>
 
-      <KivoPlusSheet open={plusOpen} onClose={closePlusSheet} onExpandedChange={setPlusExpanded} />
+      <KivoPlusSheet open={plusOpen} onClose={closePlusSheet} onExpandedChange={setPlusExpanded} onSelectPhoto={handleSelectPhoto} />
     </View>
   );
 }
@@ -349,6 +378,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 11,
     marginBottom: 12,
+    overflow: 'hidden',
+  },
+  userBubbleImage: {
+    width: 178,
+    height: 128,
+    borderRadius: 16,
+    marginHorizontal: -5,
+    marginTop: -1,
+    marginBottom: 9,
   },
   userBubbleText: {
     color: '#ffffff',
