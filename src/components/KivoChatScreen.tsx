@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Image, Keyboard, PanResponder, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, Image, Keyboard, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { KivoComposer } from './KivoComposer';
@@ -12,6 +12,7 @@ const SIDEBAR_BACKGROUND = '#f4f4f6';
 
 type ChatMessage = {
   id: string;
+  role: 'user' | 'assistant';
   text: string;
   photo?: RecentPhoto | null;
 };
@@ -31,6 +32,66 @@ function clamp(value: number, min = 0, max = 1) {
   return Math.min(max, Math.max(min, value));
 }
 
+function createFirstKivoResponse(message: string, photo?: RecentPhoto | null) {
+  if (photo && message.trim()) {
+    return 'I received the image and your message. I can use this as context and help you refine, analyze, or turn it into the next action.';
+  }
+
+  if (photo) {
+    return 'Image received. Tell me what you want me to do with it, or send another instruction and I’ll continue from there.';
+  }
+
+  return 'Got it. I’m ready to help with the next step and keep the conversation moving from here.';
+}
+
+function KivoThinkingLine() {
+  const dotOne = useRef(new Animated.Value(0.34)).current;
+  const dotTwo = useRef(new Animated.Value(0.34)).current;
+  const dotThree = useRef(new Animated.Value(0.34)).current;
+  const shimmer = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const makeDotLoop = (dot: Animated.Value, delay: number) => Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(dot, { toValue: 1, duration: 260, useNativeDriver: true }),
+        Animated.timing(dot, { toValue: 0.34, duration: 360, useNativeDriver: true }),
+      ]),
+    );
+
+    const loops = [
+      makeDotLoop(dotOne, 0),
+      makeDotLoop(dotTwo, 120),
+      makeDotLoop(dotThree, 240),
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(shimmer, { toValue: 1, duration: 900, useNativeDriver: true }),
+          Animated.timing(shimmer, { toValue: 0, duration: 900, useNativeDriver: true }),
+        ]),
+      ),
+    ];
+
+    loops.forEach((loop) => loop.start());
+
+    return () => {
+      loops.forEach((loop) => loop.stop());
+    };
+  }, [dotOne, dotThree, dotTwo, shimmer]);
+
+  const textOpacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.46, 0.86] });
+
+  return (
+    <View style={styles.thinkingLine}>
+      <Animated.Text style={[styles.thinkingText, { opacity: textOpacity }]}>Kivo is thinking</Animated.Text>
+      <View style={styles.thinkingDots}>
+        <Animated.View style={[styles.thinkingDot, { opacity: dotOne }]} />
+        <Animated.View style={[styles.thinkingDot, { opacity: dotTwo }]} />
+        <Animated.View style={[styles.thinkingDot, { opacity: dotThree }]} />
+      </View>
+    </View>
+  );
+}
+
 export function KivoChatScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -38,6 +99,7 @@ export function KivoChatScreen() {
   const pushedDistance = drawerWidth - 8;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<RecentPhoto | null>(null);
+  const [assistantThinking, setAssistantThinking] = useState(false);
   const [plusOpen, setPlusOpen] = useState(false);
   const [plusExpanded, setPlusExpanded] = useState(false);
   const [composerActive, setComposerActive] = useState(false);
@@ -54,6 +116,7 @@ export function KivoChatScreen() {
   const dragStartTimeRef = useRef(0);
   const dragModeRef = useRef<'idle' | 'horizontal' | 'vertical'>('idle');
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const responseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shouldShowTodayDashboard = messages.length === 0 && !composerActive && !plusOpen;
 
   const chatTranslateX = sidebarProgress.interpolate({
@@ -80,6 +143,12 @@ export function KivoChatScreen() {
       sidebarProgress.removeListener(listener);
     };
   }, [sidebarProgress]);
+
+  useEffect(() => {
+    return () => {
+      if (responseTimerRef.current) clearTimeout(responseTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     Animated.parallel([
@@ -165,16 +234,34 @@ export function KivoChatScreen() {
 
   function handleSubmit(message: string) {
     const photoForMessage = selectedPhoto;
+    const response = createFirstKivoResponse(message, photoForMessage);
+
+    if (responseTimerRef.current) clearTimeout(responseTimerRef.current);
+
     setMessages((current) => [
       ...current,
       {
-        id: `${Date.now()}-${current.length}`,
+        id: `${Date.now()}-${current.length}-user`,
+        role: 'user',
         text: message,
         photo: photoForMessage,
       },
     ]);
     setSelectedPhoto(null);
     setComposerActive(false);
+    setAssistantThinking(true);
+
+    responseTimerRef.current = setTimeout(() => {
+      setAssistantThinking(false);
+      setMessages((current) => [
+        ...current,
+        {
+          id: `${Date.now()}-${current.length}-assistant`,
+          role: 'assistant',
+          text: response,
+        },
+      ]);
+    }, 850);
   }
 
   function openPlusSheet() {
@@ -207,6 +294,8 @@ export function KivoChatScreen() {
   }
 
   function startNewChat() {
+    if (responseTimerRef.current) clearTimeout(responseTimerRef.current);
+    setAssistantThinking(false);
     setMessages([]);
     setSelectedPhoto(null);
     setComposerActive(false);
@@ -305,17 +394,27 @@ export function KivoChatScreen() {
               <KivoTodayDashboard />
             </Animated.View>
           ) : (
-            <View style={[styles.chatPreview, { paddingTop: insets.top + 86 }]}>
+            <ScrollView
+              style={styles.chatPreview}
+              contentContainerStyle={[styles.chatPreviewContent, { paddingTop: insets.top + 86 }]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
               {messages.map((message) => (
-                <View key={message.id} style={styles.userBubble}>
-                  {message.photo ? <Image source={{ uri: message.photo.uri }} style={styles.userBubbleImage} resizeMode="cover" /> : null}
-                  {message.text ? <Text style={styles.userBubbleText}>{message.text}</Text> : null}
-                </View>
+                message.role === 'user' ? (
+                  <View key={message.id} style={styles.userBubble}>
+                    {message.photo ? <Image source={{ uri: message.photo.uri }} style={styles.userBubbleImage} resizeMode="cover" /> : null}
+                    {message.text ? <Text style={styles.userBubbleText}>{message.text}</Text> : null}
+                  </View>
+                ) : (
+                  <View key={message.id} style={styles.assistantTextBlock}>
+                    <Text style={styles.assistantName}>Kivo</Text>
+                    <Text style={styles.assistantText}>{message.text}</Text>
+                  </View>
+                )
               ))}
-              <View style={styles.assistantBubble}>
-                <Text style={styles.assistantText}>Kivo is ready. Native agent streaming will connect here next.</Text>
-              </View>
-            </View>
+              {assistantThinking ? <KivoThinkingLine /> : null}
+            </ScrollView>
           )}
         </Pressable>
 
@@ -367,6 +466,8 @@ const styles = StyleSheet.create({
   },
   chatPreview: {
     flex: 1,
+  },
+  chatPreviewContent: {
     paddingHorizontal: 18,
     paddingBottom: 220,
   },
@@ -377,7 +478,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.text,
     paddingHorizontal: 15,
     paddingVertical: 11,
-    marginBottom: 12,
+    marginBottom: 16,
     overflow: 'hidden',
   },
   userBubbleImage: {
@@ -394,20 +495,47 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     letterSpacing: -0.25,
   },
-  assistantBubble: {
-    alignSelf: 'flex-start',
-    maxWidth: '86%',
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.78)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.045)',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
+  assistantTextBlock: {
+    maxWidth: '88%',
+    marginBottom: 18,
+    paddingLeft: 2,
+  },
+  assistantName: {
+    marginBottom: 5,
+    color: '#8f9098',
+    fontSize: 12.5,
+    fontWeight: '600',
+    letterSpacing: -0.25,
   },
   assistantText: {
     color: colors.text,
+    fontSize: 16.2,
+    lineHeight: 23,
+    letterSpacing: -0.32,
+  },
+  thinkingLine: {
+    marginTop: 2,
+    marginBottom: 18,
+    paddingLeft: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  thinkingText: {
+    color: colors.text,
     fontSize: 15.5,
-    lineHeight: 22,
-    letterSpacing: -0.25,
+    fontWeight: '500',
+    letterSpacing: -0.36,
+  },
+  thinkingDots: {
+    flexDirection: 'row',
+    gap: 4,
+    alignItems: 'center',
+  },
+  thinkingDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: colors.text,
   },
 });
