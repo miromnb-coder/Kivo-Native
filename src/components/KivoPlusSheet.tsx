@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -27,6 +28,12 @@ type SheetSnap = 'peek' | 'expanded' | 'closed';
 export type RecentPhoto = {
   id: string;
   uri: string;
+  base64?: string | null;
+  mimeType?: string;
+  name?: string;
+  width?: number;
+  height?: number;
+  mediaType?: string;
 };
 
 const actions: ActionItem[] = [
@@ -87,6 +94,35 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+function guessMimeType(uri: string, filename?: string | null) {
+  const source = `${filename ?? ''} ${uri}`.toLowerCase();
+
+  if (source.includes('.png')) return 'image/png';
+  if (source.includes('.webp')) return 'image/webp';
+  if (source.includes('.heic')) return 'image/heic';
+  if (source.includes('.heif')) return 'image/heif';
+
+  return 'image/jpeg';
+}
+
+async function readPhotoBase64(photo: RecentPhoto): Promise<RecentPhoto> {
+  if (photo.base64) return photo;
+
+  try {
+    const base64 = await FileSystem.readAsStringAsync(photo.uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    return {
+      ...photo,
+      base64,
+      mimeType: photo.mimeType ?? guessMimeType(photo.uri, photo.name),
+    };
+  } catch {
+    return photo;
+  }
+}
+
 export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }: Props) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -96,6 +132,7 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
   const [selectedConnector, setSelectedConnector] = useState<ConnectorItem | null>(null);
   const [recentPhotos, setRecentPhotos] = useState<RecentPhoto[]>([]);
   const [photoPermission, setPhotoPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown');
+  const [selectingPhotoId, setSelectingPhotoId] = useState<string | null>(null);
   const expandedRef = useRef(false);
   const scrollYRef = useRef(0);
   const sheetHeight = useRef(new Animated.Value(peekHeight)).current;
@@ -131,15 +168,27 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
         result.assets.map(async (asset) => {
           try {
             const info = await MediaLibrary.getAssetInfoAsync(asset);
+            const uri = info.localUri ?? info.uri ?? asset.uri;
+
             return {
               id: asset.id,
-              uri: info.localUri ?? info.uri ?? asset.uri,
-            };
+              uri,
+              width: asset.width,
+              height: asset.height,
+              name: asset.filename ?? `${asset.id}.jpg`,
+              mimeType: guessMimeType(uri, asset.filename),
+              mediaType: String(asset.mediaType),
+            } satisfies RecentPhoto;
           } catch {
             return {
               id: asset.id,
               uri: asset.uri,
-            };
+              width: asset.width,
+              height: asset.height,
+              name: asset.filename ?? `${asset.id}.jpg`,
+              mimeType: guessMimeType(asset.uri, asset.filename),
+              mediaType: String(asset.mediaType),
+            } satisfies RecentPhoto;
           }
         }),
       );
@@ -174,6 +223,7 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
     if (snap === 'closed') {
       updateExpanded(false);
       setSelectedConnector(null);
+      setSelectingPhotoId(null);
       Animated.timing(translateY, {
         toValue: height + 40,
         duration: 220,
@@ -218,8 +268,11 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
     animateToSnap('closed');
   }
 
-  function selectPhoto(photo: RecentPhoto) {
-    onSelectPhoto?.(photo);
+  async function selectPhoto(photo: RecentPhoto) {
+    setSelectingPhotoId(photo.id);
+    const photoWithData = await readPhotoBase64(photo);
+    onSelectPhoto?.(photoWithData);
+    setSelectingPhotoId(null);
     closeWithAnimation();
   }
 
@@ -300,6 +353,7 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
     expandedRef.current = false;
     setExpanded(false);
     setSelectedConnector(null);
+    setSelectingPhotoId(null);
     onExpandedChange?.(false);
     scrollYRef.current = 0;
     currentHeightRef.current = peekHeight;
@@ -354,7 +408,7 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
           <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false} style={styles.previewScroller} contentContainerStyle={styles.previewRow}>
             <PreviewTile large permission={photoPermission} onPress={loadRecentPhotos} />
             {recentPhotos.length > 0 ? (
-              recentPhotos.map((photo) => <PreviewTile key={photo.id} photoUri={photo.uri} onPress={() => selectPhoto(photo)} />)
+              recentPhotos.map((photo) => <PreviewTile key={photo.id} photoUri={photo.uri} loading={selectingPhotoId === photo.id} onPress={() => selectPhoto(photo)} />)
             ) : (
               <>
                 <PreviewTile />
@@ -390,14 +444,14 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
   );
 }
 
-function PreviewTile({ large = false, photoUri, permission, onPress }: { large?: boolean; photoUri?: string; permission?: 'unknown' | 'granted' | 'denied'; onPress?: () => void }) {
+function PreviewTile({ large = false, photoUri, permission, loading = false, onPress }: { large?: boolean; photoUri?: string; permission?: 'unknown' | 'granted' | 'denied'; loading?: boolean; onPress?: () => void }) {
   return (
-    <Pressable style={({ pressed }) => [styles.previewTile, large ? styles.previewTileLarge : styles.previewTileWide, pressed && styles.pressed]} onPress={onPress}>
+    <Pressable style={({ pressed }) => [styles.previewTile, large ? styles.previewTileLarge : styles.previewTileWide, pressed && styles.pressed]} onPress={onPress} disabled={loading}>
       {photoUri ? (
         <>
           <Image source={{ uri: photoUri }} style={styles.photoPreview} resizeMode="cover" />
           <View style={styles.photoSelectHint}>
-            <Feather name="plus" size={12} color="#ffffff" strokeWidth={2.3} />
+            {loading ? <Text style={styles.photoLoadingText}>...</Text> : <Feather name="plus" size={12} color="#ffffff" strokeWidth={2.3} />}
           </View>
         </>
       ) : large ? (
@@ -571,6 +625,13 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  photoLoadingText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800',
+    lineHeight: 12,
+    marginTop: -4,
   },
   cameraTileContent: {
     alignItems: 'center',
