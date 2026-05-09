@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
-import { useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Keyboard, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type KivoNativeConversation = {
@@ -17,6 +17,8 @@ type Props = {
   onClose: () => void;
   onNewChat: () => void;
   onOpenConversation?: (conversationId: string) => void;
+  onRenameConversation?: (conversationId: string, title: string) => Promise<void> | void;
+  onDeleteConversation?: (conversationId: string) => Promise<void> | void;
   onGestureProgress: (progress: number) => void;
   onGestureEnd: (open: boolean) => void;
 };
@@ -50,11 +52,15 @@ export function KivoSidebarOverlay({
   onClose,
   onNewChat,
   onOpenConversation,
+  onRenameConversation,
+  onDeleteConversation,
   onGestureProgress,
   onGestureEnd,
 }: Props) {
   const insets = useSafeAreaInsets();
   const [actionConversation, setActionConversation] = useState<KivoNativeConversation | null>(null);
+  const [renamingConversation, setRenamingConversation] = useState<KivoNativeConversation | null>(null);
+  const [deleteConversation, setDeleteConversation] = useState<KivoNativeConversation | null>(null);
   const dragStartTimeRef = useRef(0);
   const dragModeRef = useRef<'idle' | 'horizontal' | 'vertical'>('idle');
   const recentItems = conversations.slice(0, 18);
@@ -65,18 +71,36 @@ export function KivoSidebarOverlay({
 
   function closeMenu() {
     setActionConversation(null);
+    setRenamingConversation(null);
+    setDeleteConversation(null);
     onClose();
   }
 
   function handleNewChat() {
     setActionConversation(null);
+    setRenamingConversation(null);
+    setDeleteConversation(null);
     onNewChat();
   }
 
   function handleOpenConversation(id: string) {
     setActionConversation(null);
+    setRenamingConversation(null);
+    setDeleteConversation(null);
     onOpenConversation?.(id);
     onClose();
+  }
+
+  function openRename(conversation: KivoNativeConversation) {
+    setActionConversation(null);
+    setDeleteConversation(null);
+    setRenamingConversation(conversation);
+  }
+
+  function openDelete(conversation: KivoNativeConversation) {
+    setActionConversation(null);
+    setRenamingConversation(null);
+    setDeleteConversation(conversation);
   }
 
   const panResponder = useMemo(
@@ -207,7 +231,37 @@ export function KivoSidebarOverlay({
       </Animated.View>
 
       {actionConversation ? (
-        <ConversationActionSheet conversation={actionConversation} bottomInset={insets.bottom} onClose={() => setActionConversation(null)} />
+        <ConversationActionSheet
+          conversation={actionConversation}
+          bottomInset={insets.bottom}
+          onClose={() => setActionConversation(null)}
+          onRename={() => openRename(actionConversation)}
+          onDelete={() => openDelete(actionConversation)}
+        />
+      ) : null}
+
+      {renamingConversation ? (
+        <RenameConversationSheet
+          conversation={renamingConversation}
+          bottomInset={insets.bottom}
+          onClose={() => setRenamingConversation(null)}
+          onSave={async (title) => {
+            await onRenameConversation?.(renamingConversation.id, title);
+            setRenamingConversation(null);
+          }}
+        />
+      ) : null}
+
+      {deleteConversation ? (
+        <DeleteConversationSheet
+          conversation={deleteConversation}
+          bottomInset={insets.bottom}
+          onClose={() => setDeleteConversation(null)}
+          onDelete={async () => {
+            await onDeleteConversation?.(deleteConversation.id);
+            setDeleteConversation(null);
+          }}
+        />
       ) : null}
     </View>
   );
@@ -238,19 +292,132 @@ function RecentItem({ title, active = false, onPress, onLongPress }: RecentItemP
   );
 }
 
-function ConversationActionSheet({ conversation, bottomInset, onClose }: { conversation: KivoNativeConversation; bottomInset: number; onClose: () => void }) {
+function ConversationActionSheet({
+  conversation,
+  bottomInset,
+  onClose,
+  onRename,
+  onDelete,
+}: {
+  conversation: KivoNativeConversation;
+  bottomInset: number;
+  onClose: () => void;
+  onRename: () => void;
+  onDelete: () => void;
+}) {
   return (
-    <View style={[styles.actionLayer, { paddingBottom: bottomInset + 18 }]}>
+    <View style={[styles.actionLayer, { paddingBottom: bottomInset + 18 }]}> 
       <Pressable style={styles.actionBackdrop} onPress={onClose} />
       <View style={styles.actionSheet}>
         <Text numberOfLines={1} style={styles.actionTitle}>{conversation.title || 'Untitled conversation'}</Text>
-        <Pressable style={({ pressed }) => [styles.actionButton, pressed && styles.pressedRow]}>
+        <Pressable onPress={onRename} style={({ pressed }) => [styles.actionButton, pressed && styles.pressedRow]}>
           <Feather name="edit-3" size={20} color="#17181b" strokeWidth={1.9} />
           <Text style={styles.actionButtonText}>Rename</Text>
         </Pressable>
-        <Pressable style={({ pressed }) => [styles.actionButton, pressed && styles.pressedRow]}>
+        <Pressable onPress={onDelete} style={({ pressed }) => [styles.actionButton, pressed && styles.pressedRow]}>
           <Feather name="trash-2" size={20} color="#d33a32" strokeWidth={1.9} />
           <Text style={[styles.actionButtonText, styles.deleteText]}>Delete conversation</Text>
+        </Pressable>
+        <View style={styles.actionDivider} />
+        <Pressable onPress={onClose} style={({ pressed }) => [styles.cancelButton, pressed && styles.pressedRow]}>
+          <Text style={styles.cancelText}>Cancel</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function RenameConversationSheet({
+  conversation,
+  bottomInset,
+  onClose,
+  onSave,
+}: {
+  conversation: KivoNativeConversation;
+  bottomInset: number;
+  onClose: () => void;
+  onSave: (title: string) => Promise<void> | void;
+}) {
+  const [title, setTitle] = useState(conversation.title);
+  const [saving, setSaving] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+  const canSave = title.trim().length > 0 && title.trim() !== conversation.title.trim();
+
+  useEffect(() => {
+    const timer = setTimeout(() => inputRef.current?.focus(), 140);
+    return () => clearTimeout(timer);
+  }, []);
+
+  async function save() {
+    if (!canSave || saving) return;
+    setSaving(true);
+    Keyboard.dismiss();
+    await onSave(title.trim());
+    setSaving(false);
+  }
+
+  return (
+    <View style={[styles.actionLayer, { paddingBottom: bottomInset + 18 }]}> 
+      <Pressable style={styles.actionBackdrop} onPress={onClose} />
+      <View style={styles.actionSheet}>
+        <Text style={styles.actionTitle}>Rename conversation</Text>
+        <TextInput
+          ref={inputRef}
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Conversation title"
+          placeholderTextColor="#a3a4aa"
+          returnKeyType="done"
+          onSubmitEditing={save}
+          selectionColor="#111113"
+          style={styles.renameInput}
+        />
+        <View style={styles.renameActions}>
+          <Pressable onPress={onClose} style={({ pressed }) => [styles.renameButton, styles.renameButtonGhost, pressed && styles.pressedRow]}>
+            <Text style={styles.renameCancelText}>Cancel</Text>
+          </Pressable>
+          <Pressable
+            onPress={save}
+            disabled={!canSave || saving}
+            style={({ pressed }) => [styles.renameButton, styles.renameButtonPrimary, (!canSave || saving) && styles.disabledButton, pressed && canSave && !saving && styles.pressedRow]}
+          >
+            <Text style={styles.renameSaveText}>{saving ? 'Saving...' : 'Save'}</Text>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function DeleteConversationSheet({
+  conversation,
+  bottomInset,
+  onClose,
+  onDelete,
+}: {
+  conversation: KivoNativeConversation;
+  bottomInset: number;
+  onClose: () => void;
+  onDelete: () => Promise<void> | void;
+}) {
+  const [deleting, setDeleting] = useState(false);
+
+  async function remove() {
+    if (deleting) return;
+    setDeleting(true);
+    await onDelete();
+    setDeleting(false);
+  }
+
+  return (
+    <View style={[styles.actionLayer, { paddingBottom: bottomInset + 18 }]}> 
+      <Pressable style={styles.actionBackdrop} onPress={onClose} />
+      <View style={styles.actionSheet}>
+        <Text style={styles.actionTitle}>Delete conversation?</Text>
+        <Text numberOfLines={2} style={styles.deleteDescription}>{conversation.title}</Text>
+        <Pressable onPress={remove} disabled={deleting} style={({ pressed }) => [styles.actionButton, deleting && styles.disabledButton, pressed && !deleting && styles.pressedRow]}>
+          <Feather name="trash-2" size={20} color="#d33a32" strokeWidth={1.9} />
+          <Text style={[styles.actionButtonText, styles.deleteText]}>{deleting ? 'Deleting...' : 'Delete permanently'}</Text>
         </Pressable>
         <View style={styles.actionDivider} />
         <Pressable onPress={onClose} style={({ pressed }) => [styles.cancelButton, pressed && styles.pressedRow]}>
@@ -513,6 +680,14 @@ const styles = StyleSheet.create({
   deleteText: {
     color: '#d33a32',
   },
+  deleteDescription: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    color: '#7f8188',
+    fontSize: 15,
+    lineHeight: 20,
+    letterSpacing: -0.3,
+  },
   actionDivider: {
     height: StyleSheet.hairlineWidth,
     marginVertical: 6,
@@ -529,5 +704,52 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '500',
     letterSpacing: -0.6,
+  },
+  renameInput: {
+    height: 54,
+    marginHorizontal: 8,
+    marginTop: 4,
+    marginBottom: 10,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.035)',
+    paddingHorizontal: 16,
+    color: '#17181b',
+    fontSize: 17,
+    fontWeight: '500',
+    letterSpacing: -0.45,
+  },
+  renameActions: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 8,
+    paddingBottom: 2,
+  },
+  renameButton: {
+    flex: 1,
+    height: 52,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  renameButtonGhost: {
+    backgroundColor: 'rgba(0,0,0,0.035)',
+  },
+  renameButtonPrimary: {
+    backgroundColor: '#111113',
+  },
+  renameCancelText: {
+    color: '#17181b',
+    fontSize: 16.5,
+    fontWeight: '600',
+    letterSpacing: -0.42,
+  },
+  renameSaveText: {
+    color: '#ffffff',
+    fontSize: 16.5,
+    fontWeight: '600',
+    letterSpacing: -0.42,
+  },
+  disabledButton: {
+    opacity: 0.42,
   },
 });
