@@ -12,6 +12,7 @@ type ChatMessage = {
 };
 
 type KivoChatBody = {
+  mode?: 'chat' | 'title';
   message?: string;
   history?: Array<{
     role?: 'user' | 'assistant';
@@ -38,6 +39,19 @@ function cleanText(value: unknown) {
   return value.trim().slice(0, 8000);
 }
 
+function cleanTitle(value: unknown) {
+  if (typeof value !== 'string') return '';
+
+  return value
+    .replace(/[\n\r]+/g, ' ')
+    .replace(/^title\s*:/i, '')
+    .replace(/^otsikko\s*:/i, '')
+    .replace(/^['"`]+|['"`.]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 44);
+}
+
 function normalizeHistory(history: KivoChatBody['history']): ChatMessage[] {
   if (!Array.isArray(history)) return [];
 
@@ -49,6 +63,44 @@ function normalizeHistory(history: KivoChatBody['history']): ChatMessage[] {
       return { role, content } satisfies ChatMessage;
     })
     .filter((item) => item.content.length > 0);
+}
+
+async function callGroq(groqApiKey: string, messages: ChatMessage[], options?: { temperature?: number; maxTokens?: number }) {
+  const groqResponse = await fetch(GROQ_CHAT_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${groqApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: DEFAULT_MODEL,
+      messages,
+      temperature: options?.temperature ?? 0.42,
+      max_tokens: options?.maxTokens ?? 360,
+    }),
+  });
+
+  const groqData = await groqResponse.json();
+
+  if (!groqResponse.ok) {
+    return {
+      error: groqData?.error?.message ?? 'Groq request failed.',
+      details: groqData?.error ?? null,
+      status: 502,
+    };
+  }
+
+  const content = groqData?.choices?.[0]?.message?.content?.trim();
+
+  if (!content) {
+    return {
+      error: 'Groq returned an empty answer.',
+      details: null,
+      status: 502,
+    };
+  }
+
+  return { content, status: 200 };
 }
 
 Deno.serve(async (request) => {
@@ -81,6 +133,46 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: 'Message or attachment is required.' }, 400);
   }
 
+  if (body.mode === 'title') {
+    const titlePrompt = [
+      'You create short premium conversation titles for a mobile AI chat history.',
+      'Return only the title. No quotes. No markdown. No punctuation at the end.',
+      'Use the same language as the user message.',
+      'The title must be 2-5 words and under 36 characters when possible.',
+      'Make it specific and useful for finding the chat later.',
+      'If the user attached an image and the message is vague, use a short image-related title.',
+    ].join(' ');
+
+    const result = await callGroq(
+      groqApiKey,
+      [
+        { role: 'system', content: titlePrompt },
+        {
+          role: 'user',
+          content: photoAttached
+            ? `${userMessage || 'The user attached an image.'}\n\nPhoto attached: yes`
+            : userMessage,
+        },
+      ],
+      { temperature: 0.18, maxTokens: 32 },
+    );
+
+    if ('error' in result) {
+      return jsonResponse({ error: result.error, details: result.details }, result.status);
+    }
+
+    const title = cleanTitle(result.content);
+
+    if (!title) {
+      return jsonResponse({ error: 'Groq returned an empty title.' }, 502);
+    }
+
+    return jsonResponse({
+      title,
+      model: DEFAULT_MODEL,
+    });
+  }
+
   const systemPrompt = [
     'You are Kivo, a premium personal AI operator inside a mobile app.',
     'Match the user language. If the user writes Finnish, answer in Finnish. If the user writes English, answer in English.',
@@ -106,40 +198,14 @@ Deno.serve(async (request) => {
   ];
 
   try {
-    const groqResponse = await fetch(GROQ_CHAT_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${groqApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        messages,
-        temperature: 0.42,
-        max_tokens: 360,
-      }),
-    });
+    const result = await callGroq(groqApiKey, messages, { temperature: 0.42, maxTokens: 360 });
 
-    const groqData = await groqResponse.json();
-
-    if (!groqResponse.ok) {
-      return jsonResponse(
-        {
-          error: groqData?.error?.message ?? 'Groq request failed.',
-          details: groqData?.error ?? null,
-        },
-        502,
-      );
-    }
-
-    const answer = groqData?.choices?.[0]?.message?.content?.trim();
-
-    if (!answer) {
-      return jsonResponse({ error: 'Groq returned an empty answer.' }, 502);
+    if ('error' in result) {
+      return jsonResponse({ error: result.error, details: result.details }, result.status);
     }
 
     return jsonResponse({
-      answer,
+      answer: result.content,
       model: DEFAULT_MODEL,
     });
   } catch (error) {
