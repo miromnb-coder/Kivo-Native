@@ -19,6 +19,7 @@ import { KivoTodayDashboard } from './KivoTodayDashboard';
 import { KivoTopBar } from './KivoTopBar';
 
 const SIDEBAR_BACKGROUND = '#f4f4f6';
+const BASE_CHAT_BOTTOM_PADDING = 220;
 
 type ChatMessage = {
   id: string;
@@ -253,6 +254,7 @@ export function KivoChatScreenStreaming() {
   const [plusOpen, setPlusOpen] = useState(false);
   const [plusExpanded, setPlusExpanded] = useState(false);
   const [composerActive, setComposerActive] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const chatScrollRef = useRef<ScrollView>(null);
@@ -263,6 +265,7 @@ export function KivoChatScreenStreaming() {
   const userDraggingChatRef = useRef(false);
   const responseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const keyboardScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
   const conversationLoadIdRef = useRef(0);
   const sidebarProgress = useRef(new Animated.Value(0)).current;
@@ -270,6 +273,7 @@ export function KivoChatScreenStreaming() {
   const dashboardOpacity = useRef(new Animated.Value(1)).current;
   const dashboardTranslateY = useRef(new Animated.Value(0)).current;
   const shouldShowTodayDashboard = messages.length === 0 && !activeConversationId && !composerActive && !plusOpen;
+  const chatBottomPadding = BASE_CHAT_BOTTOM_PADDING + keyboardHeight;
 
   const chatTranslateX = sidebarProgress.interpolate({ inputRange: [0, 1], outputRange: [0, pushedDistance] });
   const chatScale = sidebarProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 0.992] });
@@ -351,6 +355,43 @@ export function KivoChatScreenStreaming() {
   }, [sidebarProgress]);
 
   useEffect(() => {
+    const show = Keyboard.addListener('keyboardWillShow', (event) => {
+      const nextHeight = Math.max(0, event.endCoordinates.height - insets.bottom + 18);
+      setKeyboardHeight(nextHeight);
+      shouldStickToBottomRef.current = true;
+
+      if (keyboardScrollTimerRef.current) clearTimeout(keyboardScrollTimerRef.current);
+      keyboardScrollTimerRef.current = setTimeout(() => {
+        scrollChatToEnd(true, true);
+        keyboardScrollTimerRef.current = null;
+      }, 90);
+    });
+
+    const didShow = Keyboard.addListener('keyboardDidShow', (event) => {
+      const nextHeight = Math.max(0, event.endCoordinates.height - insets.bottom + 18);
+      setKeyboardHeight(nextHeight);
+      shouldStickToBottomRef.current = true;
+      scrollChatToEnd(true, true);
+    });
+
+    const hide = Keyboard.addListener('keyboardWillHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    const didHide = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      show.remove();
+      didShow.remove();
+      hide.remove();
+      didHide.remove();
+      if (keyboardScrollTimerRef.current) clearTimeout(keyboardScrollTimerRef.current);
+    };
+  }, [insets.bottom]);
+
+  useEffect(() => {
     if (messages.length > 0 || assistantThinking) scrollChatToEnd(true);
   }, [assistantThinking, messages.length]);
 
@@ -375,6 +416,7 @@ export function KivoChatScreenStreaming() {
     return () => {
       if (responseTimerRef.current) clearTimeout(responseTimerRef.current);
       if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+      if (keyboardScrollTimerRef.current) clearTimeout(keyboardScrollTimerRef.current);
       requestIdRef.current += 1;
       conversationLoadIdRef.current += 1;
     };
@@ -592,7 +634,7 @@ export function KivoChatScreenStreaming() {
             <ScrollView
               ref={chatScrollRef}
               style={styles.chatPreview}
-              contentContainerStyle={[styles.chatPreviewContent, { paddingTop: insets.top + 86 }]}
+              contentContainerStyle={[styles.chatPreviewContent, { paddingTop: insets.top + 86, paddingBottom: chatBottomPadding }]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
               scrollEventThrottle={16}
@@ -687,7 +729,7 @@ const styles = StyleSheet.create({
   },
   chatPreviewContent: {
     paddingHorizontal: 18,
-    paddingBottom: 220,
+    paddingBottom: BASE_CHAT_BOTTOM_PADDING,
   },
   userBubble: {
     alignSelf: 'flex-end',
