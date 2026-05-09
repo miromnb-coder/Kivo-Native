@@ -126,7 +126,24 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
         sortBy: [MediaLibrary.SortBy.creationTime],
       });
 
-      setRecentPhotos(result.assets.map((asset) => ({ id: asset.id, uri: asset.uri })));
+      const photos = await Promise.all(
+        result.assets.map(async (asset) => {
+          try {
+            const info = await MediaLibrary.getAssetInfoAsync(asset);
+            return {
+              id: asset.id,
+              uri: info.localUri ?? info.uri ?? asset.uri,
+            };
+          } catch {
+            return {
+              id: asset.id,
+              uri: asset.uri,
+            };
+          }
+        }),
+      );
+
+      setRecentPhotos(photos.filter((photo) => Boolean(photo.uri) && !photo.uri.startsWith('ph://')));
     } catch {
       setPhotoPermission('denied');
       setRecentPhotos([]);
