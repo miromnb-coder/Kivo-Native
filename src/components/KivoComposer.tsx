@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Keyboard, NativeSyntheticEvent, Platform, Pressable, StyleSheet, Text, TextInput, TextInputContentSizeChangeEventData, View } from 'react-native';
+import { Animated, Image, Keyboard, NativeSyntheticEvent, Platform, Pressable, StyleSheet, Text, TextInput, TextInputContentSizeChangeEventData, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import type { RecentPhoto } from './KivoPlusSheet';
@@ -14,28 +14,43 @@ type Props = {
 };
 
 const MIN_INPUT_HEIGHT = 23;
-const MAX_INPUT_HEIGHT = 118;
+const MAX_INPUT_HEIGHT = 132;
 const BASE_COMPOSER_HEIGHT = 103;
 const BASE_ATTACHMENT_COMPOSER_HEIGHT = 171;
 const COMPOSER_FIXED_SPACE = 80;
 const ATTACHMENT_COMPOSER_FIXED_SPACE = 148;
+const INPUT_LINE_HEIGHT = 22;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+function estimateDraftHeight(text: string, screenWidth: number) {
+  if (!text) return MIN_INPUT_HEIGHT;
+
+  const inputWidth = Math.max(180, screenWidth - 72);
+  const approximateCharsPerLine = Math.max(24, Math.floor(inputWidth / 8.4));
+  const visualLineCount = text.split('\n').reduce((total, line) => {
+    return total + Math.max(1, Math.ceil(line.length / approximateCharsPerLine));
+  }, 0);
+
+  return Math.max(MIN_INPUT_HEIGHT, visualLineCount * INPUT_LINE_HEIGHT + 2);
+}
+
 export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selectedPhoto, onRemovePhoto }: Props) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const [value, setValue] = useState('');
   const [keyboardOpen, setKeyboardOpen] = useState(false);
-  const [draftContentHeight, setDraftContentHeight] = useState(MIN_INPUT_HEIGHT);
+  const [draftMeasuredHeight, setDraftMeasuredHeight] = useState(MIN_INPUT_HEIGHT);
   const inputRef = useRef<TextInput>(null);
   const offset = useRef(new Animated.Value(0)).current;
   const hasAttachment = Boolean(selectedPhoto);
   const canSend = value.trim().length > 0 || hasAttachment;
 
-  const inputHeight = clamp(draftContentHeight, MIN_INPUT_HEIGHT, MAX_INPUT_HEIGHT);
-  const inputScrollEnabled = draftContentHeight > MAX_INPUT_HEIGHT + 2;
+  const draftNaturalHeight = Math.max(draftMeasuredHeight, estimateDraftHeight(value, width));
+  const inputHeight = clamp(draftNaturalHeight, MIN_INPUT_HEIGHT, MAX_INPUT_HEIGHT);
+  const inputScrollEnabled = draftNaturalHeight > MAX_INPUT_HEIGHT + 2;
   const composerHeight = useMemo(() => {
     const fixedSpace = hasAttachment ? ATTACHMENT_COMPOSER_FIXED_SPACE : COMPOSER_FIXED_SPACE;
     const minimumHeight = hasAttachment ? BASE_ATTACHMENT_COMPOSER_HEIGHT : BASE_COMPOSER_HEIGHT;
@@ -65,7 +80,7 @@ export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selected
 
   function handleContentSizeChange(event: NativeSyntheticEvent<TextInputContentSizeChangeEventData>) {
     const nextHeight = Math.ceil(event.nativeEvent.contentSize.height);
-    setDraftContentHeight(clamp(nextHeight, MIN_INPUT_HEIGHT, MAX_INPUT_HEIGHT + 80));
+    setDraftMeasuredHeight(Math.max(MIN_INPUT_HEIGHT, nextHeight));
   }
 
   useEffect(() => {
@@ -74,7 +89,7 @@ export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selected
 
   useEffect(() => {
     if (value.length === 0) {
-      setDraftContentHeight(MIN_INPUT_HEIGHT);
+      setDraftMeasuredHeight(MIN_INPUT_HEIGHT);
     }
   }, [value]);
 
@@ -103,7 +118,7 @@ export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selected
     const message = value.trim();
     if (!message && !hasAttachment) return;
     setValue('');
-    setDraftContentHeight(MIN_INPUT_HEIGHT);
+    setDraftMeasuredHeight(MIN_INPUT_HEIGHT);
     inputRef.current?.blur();
     onSubmit?.(message || 'Image attached');
     onRemovePhoto?.();
@@ -278,7 +293,7 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
     color: colors.text,
     fontSize: 16.8,
-    lineHeight: 22,
+    lineHeight: INPUT_LINE_HEIGHT,
     letterSpacing: -0.42,
   },
   controls: {
