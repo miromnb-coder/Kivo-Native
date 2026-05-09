@@ -9,6 +9,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onExpandedChange?: (expanded: boolean) => void;
+  onSelectPhoto?: (photo: RecentPhoto) => void;
 };
 
 type ActionItem = {
@@ -23,7 +24,7 @@ type ConnectorItem = NativeConnector & {
 
 type SheetSnap = 'peek' | 'expanded' | 'closed';
 
-type RecentPhoto = {
+export type RecentPhoto = {
   id: string;
   uri: string;
 };
@@ -86,7 +87,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
+export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }: Props) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const peekHeight = Math.min(height * 0.78, Math.max(520, height - 118));
@@ -215,6 +216,11 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
 
   function closeWithAnimation() {
     animateToSnap('closed');
+  }
+
+  function selectPhoto(photo: RecentPhoto) {
+    onSelectPhoto?.(photo);
+    closeWithAnimation();
   }
 
   const panResponder = useMemo(
@@ -348,7 +354,7 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false} style={styles.previewScroller} contentContainerStyle={styles.previewRow}>
             <PreviewTile large permission={photoPermission} onPress={loadRecentPhotos} />
             {recentPhotos.length > 0 ? (
-              recentPhotos.map((photo) => <PreviewTile key={photo.id} photoUri={photo.uri} />)
+              recentPhotos.map((photo) => <PreviewTile key={photo.id} photoUri={photo.uri} onPress={() => selectPhoto(photo)} />)
             ) : (
               <>
                 <PreviewTile />
@@ -388,7 +394,12 @@ function PreviewTile({ large = false, photoUri, permission, onPress }: { large?:
   return (
     <Pressable style={({ pressed }) => [styles.previewTile, large ? styles.previewTileLarge : styles.previewTileWide, pressed && styles.pressed]} onPress={onPress}>
       {photoUri ? (
-        <Image source={{ uri: photoUri }} style={styles.photoPreview} resizeMode="cover" />
+        <>
+          <Image source={{ uri: photoUri }} style={styles.photoPreview} resizeMode="cover" />
+          <View style={styles.photoSelectHint}>
+            <Feather name="plus" size={12} color="#ffffff" strokeWidth={2.3} />
+          </View>
+        </>
       ) : large ? (
         <View style={styles.cameraTileContent}>
           <Feather name="camera" size={34} color="#4f5055" strokeWidth={2.05} />
@@ -547,6 +558,19 @@ const styles = StyleSheet.create({
   photoPreview: {
     width: '100%',
     height: '100%',
+  },
+  photoSelectHint: {
+    position: 'absolute',
+    right: 8,
+    top: 8,
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.46)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cameraTileContent: {
     alignItems: 'center',
