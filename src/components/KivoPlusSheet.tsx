@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system';
+import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -125,46 +125,17 @@ async function getAssetInfoWithLocalUri(asset: MediaLibrary.Asset | string) {
   }
 }
 
-async function getReadablePhotoUri(photo: RecentPhoto) {
-  try {
-    const info = await getAssetInfoWithLocalUri(photo.id);
-    const uri = info.localUri ?? info.uri ?? photo.uri;
-    return uri || photo.uri;
-  } catch {
-    return photo.uri;
-  }
-}
-
-async function readPhotoBase64(photo: RecentPhoto): Promise<RecentPhoto> {
-  if (photo.base64) return photo;
-
-  const readableUri = await getReadablePhotoUri(photo);
-
-  if (!readableUri || readableUri.startsWith('ph://')) {
-    return {
-      ...photo,
-      base64: null,
-    };
-  }
-
-  try {
-    const base64 = await FileSystem.readAsStringAsync(readableUri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-
-    return {
-      ...photo,
-      uri: readableUri,
-      base64,
-      mimeType: photo.mimeType ?? guessMimeType(readableUri, photo.name),
-      name: photo.name ?? `${photo.id}.jpg`,
-    };
-  } catch {
-    return {
-      ...photo,
-      base64: null,
-    };
-  }
+function photoFromPickerAsset(asset: ImagePicker.ImagePickerAsset): RecentPhoto {
+  return {
+    id: asset.assetId ?? asset.uri ?? String(Date.now()),
+    uri: asset.uri,
+    base64: asset.base64 ?? null,
+    mimeType: asset.mimeType ?? guessMimeType(asset.uri, asset.fileName),
+    name: asset.fileName ?? 'image.jpg',
+    width: asset.width,
+    height: asset.height,
+    mediaType: 'photo',
+  };
 }
 
 export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }: Props) {
@@ -184,6 +155,40 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
   const currentHeightRef = useRef(peekHeight);
   const currentTranslateRef = useRef(height);
   const gestureStartHeightRef = useRef(peekHeight);
+
+  async function openNativePhotoPicker(sourceId = 'picker') {
+    try {
+      setSelectingPhotoId(sourceId);
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permission.granted) {
+        setPhotoPermission('denied');
+        setSelectingPhotoId(null);
+        return;
+      }
+
+      setPhotoPermission('granted');
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.72,
+        base64: true,
+        exif: false,
+      });
+
+      if (result.canceled || !result.assets?.[0]) {
+        setSelectingPhotoId(null);
+        return;
+      }
+
+      const photo = photoFromPickerAsset(result.assets[0]);
+      onSelectPhoto?.(photo);
+      setSelectingPhotoId(null);
+      closeWithAnimation();
+    } catch {
+      setSelectingPhotoId(null);
+    }
+  }
 
   async function loadRecentPhotos() {
     try {
@@ -312,11 +317,7 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
   }
 
   async function selectPhoto(photo: RecentPhoto) {
-    setSelectingPhotoId(photo.id);
-    const photoWithData = await readPhotoBase64(photo);
-    onSelectPhoto?.(photoWithData);
-    setSelectingPhotoId(null);
-    closeWithAnimation();
+    await openNativePhotoPicker(photo.id);
   }
 
   const panResponder = useMemo(
@@ -436,27 +437,27 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
         >
           <View style={styles.photoHeader}>
             <Text style={styles.photoHeaderTitle}>Kivo</Text>
-            <Pressable style={({ pressed }) => [styles.photoHeaderActionWrap, pressed && styles.pressed]} onPress={loadRecentPhotos}>
+            <Pressable style={({ pressed }) => [styles.photoHeaderActionWrap, pressed && styles.pressed]} onPress={() => openNativePhotoPicker('all-photos')}>
               <Text style={styles.photoHeaderAction}>All photos</Text>
             </Pressable>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false} style={styles.previewScroller} contentContainerStyle={styles.previewRow}>
-            <PreviewTile large permission={photoPermission} onPress={loadRecentPhotos} />
+            <PreviewTile large permission={photoPermission} loading={selectingPhotoId === 'camera'} onPress={() => openNativePhotoPicker('camera')} />
             {recentPhotos.length > 0 ? (
               recentPhotos.map((photo) => <PreviewTile key={photo.id} photoUri={photo.uri} loading={selectingPhotoId === photo.id} onPress={() => selectPhoto(photo)} />)
             ) : (
               <>
-                <PreviewTile />
-                <PreviewTile />
-                <PreviewTile />
+                <PreviewTile onPress={() => openNativePhotoPicker('empty-1')} />
+                <PreviewTile onPress={() => openNativePhotoPicker('empty-2')} />
+                <PreviewTile onPress={() => openNativePhotoPicker('empty-3')} />
               </>
             )}
           </ScrollView>
 
           <View style={styles.actionsList}>
             {actions.map((item) => (
-              <ActionRow key={item.title} item={item} onPress={item.title === 'Add files' ? closeWithAnimation : undefined} />
+              <ActionRow key={item.title} item={item} onPress={item.title === 'Add files' ? () => openNativePhotoPicker('add-files') : undefined} />
             ))}
           </View>
 
