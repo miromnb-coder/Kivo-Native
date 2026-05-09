@@ -37,9 +37,14 @@ type KivoChatBody = {
   imageName?: string;
 };
 
+type GroqCallResult =
+  | { content: string; model: string; status: 200; usedSearch?: boolean }
+  | { error: string; details: unknown; status: number };
+
 const GROQ_CHAT_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const DEFAULT_CHAT_MODEL = Deno.env.get('GROQ_CHAT_MODEL') ?? 'openai/gpt-oss-20b';
 const DEFAULT_SEARCH_MODEL = Deno.env.get('GROQ_SEARCH_MODEL') ?? 'groq/compound-mini';
+const SEARCH_FALLBACK_MODEL = Deno.env.get('GROQ_SEARCH_FALLBACK_MODEL') ?? 'groq/compound';
 const DEFAULT_VISION_MODEL = Deno.env.get('GROQ_VISION_MODEL') ?? 'meta-llama/llama-4-scout-17b-16e-instruct';
 const MAX_IMAGE_BASE64_CHARS = 4_000_000;
 
@@ -49,6 +54,17 @@ function jsonResponse(body: unknown, status = 200) {
     headers: {
       ...corsHeaders,
       'Content-Type': 'application/json',
+    },
+  });
+}
+
+function textResponse(text: string, status = 200) {
+  return new Response(text, {
+    status,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
     },
   });
 }
@@ -104,6 +120,10 @@ function buildImageDataUrl(base64: string, mimeType: string) {
   return `data:${mimeType};base64,${base64}`;
 }
 
+function isCompoundModel(model: string) {
+  return model.startsWith('groq/compound');
+}
+
 function makeGroqPayload({
   model,
   messages,
@@ -117,13 +137,26 @@ function makeGroqPayload({
   maxTokens?: number;
   stream?: boolean;
 }) {
-  return {
+  const payload: Record<string, unknown> = {
     model,
     messages,
     temperature,
     max_tokens: maxTokens,
     stream,
   };
+
+  if (isCompoundModel(model)) {
+    payload.compound_custom = {
+      tools: {
+        enabled_tools: ['web_search'],
+      },
+    };
+    payload.search_settings = {
+      country: 'finland',
+    };
+  }
+
+  return payload;
 }
 
 function shouldUseSmartSearch(userMessage: string) {
@@ -223,12 +256,13 @@ async function callGroq({
   messages: VisionChatMessage[];
   temperature?: number;
   maxTokens?: number;
-}) {
+}): Promise<GroqCallResult> {
   const groqResponse = await fetch(GROQ_CHAT_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${groqApiKey}`,
       'Content-Type': 'application/json',
+      ...(isCompoundModel(model) ? { 'Groq-Model-Version': 'latest' } : {}),
     },
     body: JSON.stringify(makeGroqPayload({ model, messages, temperature, maxTokens })),
   });
@@ -253,7 +287,44 @@ async function callGroq({
     };
   }
 
-  return { content, status: 200 };
+  return {
+    content,
+    model,
+    status: 200,
+    usedSearch: Boolean(groqData?.choices?.[0]?.message?.executed_tools?.length),
+  };
+}
+
+async function callSmartSearchGroq({
+  groqApiKey,
+  messages,
+  maxTokens,
+}: {
+  groqApiKey: string;
+  messages: VisionChatMessage[];
+  maxTokens: number;
+}): Promise<GroqCallResult> {
+  const primary = await callGroq({
+    groqApiKey,
+    model: DEFAULT_SEARCH_MODEL,
+    messages,
+    temperature: 0.25,
+    maxTokens,
+  });
+
+  if (!('error' in primary)) return primary;
+
+  const fallback = await callGroq({
+    groqApiKey,
+    model: SEARCH_FALLBACK_MODEL,
+    messages,
+    temperature: 0.25,
+    maxTokens,
+  });
+
+  if (!('error' in fallback)) return fallback;
+
+  return primary;
 }
 
 async function callGroqStream({
@@ -382,7 +453,7 @@ function buildSystemPrompt(hasImage: boolean, memoryContext: string, smartSearch
       'You are running on Groq Compound with built-in web search available.',
       'Use web search for current prices, availability, docs, model names, release status, recent news, and other time-sensitive external facts.',
       'Prefer official documentation, product pages, changelogs, and reputable sources.',
-      'When web search affects the answer, include short source links at the end under "Sources". Keep the answer concise.',
+      'When web search affects the answer, include a short Sources section at the end. Keep the answer concise.',
     );
   }
 
@@ -537,7 +608,7 @@ Deno.serve(async (request) => {
 
     return jsonResponse({
       title,
-      model: hasImage ? DEFAULT_VISION_MODEL : DEFAULT_CHAT_MODEL,
+      model: titleResult.model,
       usedVision: hasImage,
       usedMemory: false,
       usedSearch: false,
@@ -555,22 +626,10 @@ Deno.serve(async (request) => {
   const model = hasImage ? DEFAULT_VISION_MODEL : smartSearchEnabled ? DEFAULT_SEARCH_MODEL : DEFAULT_CHAT_MODEL;
   const maxTokens = hasImage ? 620 : smartSearchEnabled ? 760 : memoryContext ? 520 : 420;
 
-  if (body.stream) {
-    return callGroqStream({
+  if (body.stream && smartSearchEnabled) {
+    const result = await callSmartSearchGroq({
       groqApiKey,
-      model,
       messages,
-      temperature: smartSearchEnabled ? 0.25 : 0.42,
-      maxTokens,
-    });
-  }
-
-  try {
-    const result = await callGroq({
-      groqApiKey,
-      model,
-      messages,
-      temperature: smartSearchEnabled ? 0.25 : 0.42,
       maxTokens,
     });
 
@@ -578,12 +637,40 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: result.error, details: result.details }, result.status);
     }
 
+    return textResponse(result.content);
+  }
+
+  if (body.stream) {
+    return callGroqStream({
+      groqApiKey,
+      model,
+      messages,
+      temperature: 0.42,
+      maxTokens,
+    });
+  }
+
+  try {
+    const result = smartSearchEnabled
+      ? await callSmartSearchGroq({ groqApiKey, messages, maxTokens })
+      : await callGroq({
+          groqApiKey,
+          model,
+          messages,
+          temperature: 0.42,
+          maxTokens,
+        });
+
+    if ('error' in result) {
+      return jsonResponse({ error: result.error, details: result.details }, result.status);
+    }
+
     return jsonResponse({
       answer: result.content,
-      model,
+      model: result.model,
       usedVision: hasImage,
       usedMemory: Boolean(memoryContext),
-      usedSearch: smartSearchEnabled,
+      usedSearch: smartSearchEnabled || Boolean(result.usedSearch),
     });
   } catch (error) {
     return jsonResponse(
