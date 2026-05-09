@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Image, Keyboard, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Image, Keyboard, NativeSyntheticEvent, Platform, Pressable, StyleSheet, Text, TextInput, TextInputContentSizeChangeEventData, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import type { RecentPhoto } from './KivoPlusSheet';
@@ -13,14 +13,35 @@ type Props = {
   onRemovePhoto?: () => void;
 };
 
+const MIN_INPUT_HEIGHT = 23;
+const MAX_INPUT_HEIGHT = 118;
+const BASE_COMPOSER_HEIGHT = 103;
+const BASE_ATTACHMENT_COMPOSER_HEIGHT = 171;
+const COMPOSER_FIXED_SPACE = 80;
+const ATTACHMENT_COMPOSER_FIXED_SPACE = 148;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selectedPhoto, onRemovePhoto }: Props) {
   const insets = useSafeAreaInsets();
   const [value, setValue] = useState('');
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [draftContentHeight, setDraftContentHeight] = useState(MIN_INPUT_HEIGHT);
   const inputRef = useRef<TextInput>(null);
   const offset = useRef(new Animated.Value(0)).current;
   const hasAttachment = Boolean(selectedPhoto);
   const canSend = value.trim().length > 0 || hasAttachment;
+
+  const inputHeight = clamp(draftContentHeight, MIN_INPUT_HEIGHT, MAX_INPUT_HEIGHT);
+  const inputScrollEnabled = draftContentHeight > MAX_INPUT_HEIGHT + 2;
+  const composerHeight = useMemo(() => {
+    const fixedSpace = hasAttachment ? ATTACHMENT_COMPOSER_FIXED_SPACE : COMPOSER_FIXED_SPACE;
+    const minimumHeight = hasAttachment ? BASE_ATTACHMENT_COMPOSER_HEIGHT : BASE_COMPOSER_HEIGHT;
+
+    return Math.max(minimumHeight, fixedSpace + inputHeight);
+  }, [hasAttachment, inputHeight]);
 
   function animateOffset(toValue: number, duration = 240) {
     Animated.timing(offset, {
@@ -42,9 +63,20 @@ export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selected
     onOpenPlus?.();
   }
 
+  function handleContentSizeChange(event: NativeSyntheticEvent<TextInputContentSizeChangeEventData>) {
+    const nextHeight = Math.ceil(event.nativeEvent.contentSize.height);
+    setDraftContentHeight(clamp(nextHeight, MIN_INPUT_HEIGHT, MAX_INPUT_HEIGHT + 80));
+  }
+
   useEffect(() => {
     onComposingChange?.(keyboardOpen || value.trim().length > 0 || hasAttachment);
   }, [hasAttachment, keyboardOpen, onComposingChange, value]);
+
+  useEffect(() => {
+    if (value.length === 0) {
+      setDraftContentHeight(MIN_INPUT_HEIGHT);
+    }
+  }, [value]);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -71,6 +103,7 @@ export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selected
     const message = value.trim();
     if (!message && !hasAttachment) return;
     setValue('');
+    setDraftContentHeight(MIN_INPUT_HEIGHT);
     inputRef.current?.blur();
     onSubmit?.(message || 'Image attached');
     onRemovePhoto?.();
@@ -84,7 +117,7 @@ export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selected
 
   return (
     <Animated.View style={[styles.wrap, { paddingBottom: Math.max(18, insets.bottom - 10), transform: [{ translateY: Animated.multiply(offset, -1) }] }]}>
-      <View style={[styles.composer, hasAttachment && styles.composerWithAttachment]}>
+      <View style={[styles.composer, { height: composerHeight }, hasAttachment && styles.composerWithAttachment]}>
         {selectedPhoto ? (
           <View style={styles.attachmentRow}>
             <View style={styles.attachmentThumbWrap}>
@@ -104,6 +137,7 @@ export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selected
           ref={inputRef}
           value={value}
           onChangeText={setValue}
+          onContentSizeChange={handleContentSizeChange}
           onFocus={() => {
             setKeyboardOpen(true);
             onComposingChange?.(true);
@@ -114,7 +148,8 @@ export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selected
           placeholder="Ask anything or assign a task"
           placeholderTextColor="#a9a9b0"
           multiline
-          style={styles.input}
+          scrollEnabled={inputScrollEnabled}
+          style={[styles.input, { height: inputHeight }]}
           selectionColor={colors.text}
           keyboardAppearance="light"
           textAlignVertical="top"
@@ -170,7 +205,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   composer: {
-    height: 103,
     borderRadius: 34,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.028)',
@@ -184,7 +218,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 14 },
   },
   composerWithAttachment: {
-    height: 171,
     borderRadius: 36,
   },
   attachmentRow: {
@@ -240,7 +273,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.25,
   },
   input: {
-    height: 23,
     paddingHorizontal: 4,
     paddingTop: 0,
     paddingBottom: 0,
