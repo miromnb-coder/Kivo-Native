@@ -1,5 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as MediaLibrary from 'expo-media-library';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -99,27 +100,71 @@ function guessMimeType(uri: string, filename?: string | null) {
 
   if (source.includes('.png')) return 'image/png';
   if (source.includes('.webp')) return 'image/webp';
-  if (source.includes('.heic')) return 'image/heic';
-  if (source.includes('.heif')) return 'image/heif';
 
   return 'image/jpeg';
+}
+
+async function getReadablePhotoUri(photo: RecentPhoto) {
+  if (photo.uri && !photo.uri.startsWith('ph://')) return photo.uri;
+
+  try {
+    const info = await MediaLibrary.getAssetInfoAsync(photo.id);
+    const uri = info.localUri ?? info.uri ?? photo.uri;
+
+    if (uri && !uri.startsWith('ph://')) return uri;
+    return uri || photo.uri;
+  } catch {
+    return photo.uri;
+  }
 }
 
 async function readPhotoBase64(photo: RecentPhoto): Promise<RecentPhoto> {
   if (photo.base64) return photo;
 
+  const readableUri = await getReadablePhotoUri(photo);
+
   try {
-    const base64 = await FileSystem.readAsStringAsync(photo.uri, {
+    const manipulated = await ImageManipulator.manipulateAsync(
+      readableUri,
+      [{ resize: { width: 1280 } }],
+      {
+        compress: 0.72,
+        format: ImageManipulator.SaveFormat.JPEG,
+        base64: true,
+      },
+    );
+
+    if (manipulated.base64) {
+      return {
+        ...photo,
+        uri: photo.uri,
+        base64: manipulated.base64,
+        mimeType: 'image/jpeg',
+        name: photo.name ?? `${photo.id}.jpg`,
+        width: manipulated.width ?? photo.width,
+        height: manipulated.height ?? photo.height,
+      };
+    }
+  } catch {
+    // Fall through to direct file reading below.
+  }
+
+  try {
+    const base64 = await FileSystem.readAsStringAsync(readableUri, {
       encoding: FileSystem.EncodingType.Base64,
     });
 
     return {
       ...photo,
+      uri: photo.uri,
       base64,
-      mimeType: photo.mimeType ?? guessMimeType(photo.uri, photo.name),
+      mimeType: photo.mimeType ?? guessMimeType(readableUri, photo.name),
     };
   } catch {
-    return photo;
+    return {
+      ...photo,
+      base64: null,
+    };
   }
 }
 
@@ -193,7 +238,7 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
         }),
       );
 
-      setRecentPhotos(photos.filter((photo) => Boolean(photo.uri) && !photo.uri.startsWith('ph://')));
+      setRecentPhotos(photos.filter((photo) => Boolean(photo.uri)));
     } catch {
       setPhotoPermission('denied');
       setRecentPhotos([]);
