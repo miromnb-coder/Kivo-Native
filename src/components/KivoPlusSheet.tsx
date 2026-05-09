@@ -1,9 +1,19 @@
 import { Feather } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
-import * as ImageManipulator from 'expo-image-manipulator';
 import * as MediaLibrary from 'expo-media-library';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import {
+  Animated,
+  Easing,
+  Image,
+  PanResponder,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KivoConnectorDetailView, type NativeConnector } from './KivoConnectorDetailView';
 
@@ -100,18 +110,15 @@ function guessMimeType(uri: string, filename?: string | null) {
 
   if (source.includes('.png')) return 'image/png';
   if (source.includes('.webp')) return 'image/webp';
+  if (source.includes('.jpg') || source.includes('.jpeg')) return 'image/jpeg';
 
   return 'image/jpeg';
 }
 
 async function getReadablePhotoUri(photo: RecentPhoto) {
-  if (photo.uri && !photo.uri.startsWith('ph://')) return photo.uri;
-
   try {
     const info = await MediaLibrary.getAssetInfoAsync(photo.id);
     const uri = info.localUri ?? info.uri ?? photo.uri;
-
-    if (uri && !uri.startsWith('ph://')) return uri;
     return uri || photo.uri;
   } catch {
     return photo.uri;
@@ -124,41 +131,15 @@ async function readPhotoBase64(photo: RecentPhoto): Promise<RecentPhoto> {
   const readableUri = await getReadablePhotoUri(photo);
 
   try {
-    const manipulated = await ImageManipulator.manipulateAsync(
-      readableUri,
-      [{ resize: { width: 1280 } }],
-      {
-        compress: 0.72,
-        format: ImageManipulator.SaveFormat.JPEG,
-        base64: true,
-      },
-    );
-
-    if (manipulated.base64) {
-      return {
-        ...photo,
-        uri: photo.uri,
-        base64: manipulated.base64,
-        mimeType: 'image/jpeg',
-        name: photo.name ?? `${photo.id}.jpg`,
-        width: manipulated.width ?? photo.width,
-        height: manipulated.height ?? photo.height,
-      };
-    }
-  } catch {
-    // Fall through to direct file reading below.
-  }
-
-  try {
     const base64 = await FileSystem.readAsStringAsync(readableUri, {
       encoding: FileSystem.EncodingType.Base64,
     });
 
     return {
       ...photo,
-      uri: photo.uri,
       base64,
       mimeType: photo.mimeType ?? guessMimeType(readableUri, photo.name),
+      name: photo.name ?? `${photo.id}.jpg`,
     };
   } catch {
     return {
@@ -185,7 +166,6 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
   const currentHeightRef = useRef(peekHeight);
   const currentTranslateRef = useRef(height);
   const gestureStartHeightRef = useRef(peekHeight);
-  const gestureModeRef = useRef<'idle' | 'sheet' | 'scroll'>('idle');
 
   async function loadRecentPhotos() {
     try {
@@ -327,12 +307,10 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
       onMoveShouldSetPanResponder: (_, gesture) => {
         const mostlyVertical = Math.abs(gesture.dy) > Math.abs(gesture.dx) * 1.08;
         if (!mostlyVertical || Math.abs(gesture.dy) < 4) return false;
-
         if (!expandedRef.current) return true;
         return scrollYRef.current <= 1 && gesture.dy > 6;
       },
       onPanResponderGrant: () => {
-        gestureModeRef.current = 'sheet';
         gestureStartHeightRef.current = currentHeightRef.current;
         sheetHeight.stopAnimation((value) => {
           currentHeightRef.current = value;
@@ -343,8 +321,6 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
         });
       },
       onPanResponderMove: (_, gesture) => {
-        if (gestureModeRef.current !== 'sheet') return;
-
         const startHeight = gestureStartHeightRef.current;
 
         if (gesture.dy < 0) {
@@ -357,7 +333,6 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
         if (startHeight > peekHeight + 1) {
           const nextHeight = Math.max(peekHeight, startHeight - gesture.dy);
           setSheetHeight(nextHeight);
-
           const overflow = Math.max(0, gesture.dy - (startHeight - peekHeight));
           setSheetTranslate(overflow);
           if (nextHeight < expandedHeight - 64) updateExpanded(false);
@@ -368,7 +343,6 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
         setSheetTranslate(gesture.dy);
       },
       onPanResponderRelease: (_, gesture) => {
-        gestureModeRef.current = 'idle';
         const heightNow = currentHeightRef.current;
         const translateNow = currentTranslateRef.current;
         const middle = peekHeight + (expandedHeight - peekHeight) * 0.45;
@@ -386,7 +360,6 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
         animateToSnap('peek');
       },
       onPanResponderTerminate: () => {
-        gestureModeRef.current = 'idle';
         animateToSnap(currentHeightRef.current > peekHeight + (expandedHeight - peekHeight) * 0.5 ? 'expanded' : 'peek');
       },
     }),
