@@ -20,6 +20,13 @@ type KivoChatFunctionResponse = {
   error?: string;
 };
 
+type KivoStreamRequest = KivoChatRequest & {
+  onDelta?: (delta: string) => void;
+};
+
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
 function hasUsableImageData(photo?: RecentPhoto | null) {
   return Boolean(photo?.base64);
 }
@@ -71,6 +78,36 @@ function buildPhotoPayload(photo?: RecentPhoto | null) {
   };
 }
 
+function splitForTypewriter(answer: string) {
+  const chunks = answer.match(/.{1,10}(\s|$)|.{1,10}/g);
+  return chunks?.filter(Boolean) ?? [answer];
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function playFallbackTypewriter(answer: string, onDelta?: (delta: string) => void) {
+  if (!onDelta) return;
+
+  for (const chunk of splitForTypewriter(answer)) {
+    onDelta(chunk);
+    await wait(18);
+  }
+}
+
+async function getFunctionHeaders() {
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data.session?.access_token ?? supabasePublishableKey;
+
+  return {
+    apikey: supabasePublishableKey ?? '',
+    Authorization: `Bearer ${accessToken ?? ''}`,
+    'Content-Type': 'application/json',
+    Accept: 'text/plain',
+  };
+}
+
 export async function askKivoAi({ message, photo, history = [] }: KivoChatRequest) {
   try {
     const { data, error } = await supabase.functions.invoke<KivoChatFunctionResponse>('kivo-chat', {
@@ -96,6 +133,78 @@ export async function askKivoAi({ message, photo, history = [] }: KivoChatReques
   } catch (error) {
     console.warn('Failed to call kivo-chat function', error);
     return buildFallbackAnswer(message, photo);
+  }
+}
+
+export async function askKivoAiStream({ message, photo, history = [], onDelta }: KivoStreamRequest) {
+  if (!supabaseUrl || !supabasePublishableKey) {
+    const answer = buildFallbackAnswer(message, photo);
+    await playFallbackTypewriter(answer, onDelta);
+    return answer;
+  }
+
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/kivo-chat`, {
+      method: 'POST',
+      headers: await getFunctionHeaders(),
+      body: JSON.stringify({
+        mode: 'chat',
+        stream: true,
+        message,
+        history,
+        ...buildPhotoPayload(photo),
+      }),
+    });
+
+    if (!response.ok) {
+      const answer = await askKivoAi({ message, photo, history });
+      await playFallbackTypewriter(answer, onDelta);
+      return answer;
+    }
+
+    const reader = response.body?.getReader?.();
+
+    if (!reader) {
+      const answer = await response.text();
+      const cleanAnswer = answer.trim() || buildFallbackAnswer(message, photo);
+      await playFallbackTypewriter(cleanAnswer, onDelta);
+      return cleanAnswer;
+    }
+
+    const decoder = new TextDecoder();
+    let finalAnswer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      if (!chunk) continue;
+
+      finalAnswer += chunk;
+      onDelta?.(chunk);
+    }
+
+    const tail = decoder.decode();
+    if (tail) {
+      finalAnswer += tail;
+      onDelta?.(tail);
+    }
+
+    const cleanAnswer = finalAnswer.trim();
+
+    if (!cleanAnswer) {
+      const fallback = buildFallbackAnswer(message, photo);
+      await playFallbackTypewriter(fallback, onDelta);
+      return fallback;
+    }
+
+    return cleanAnswer;
+  } catch (error) {
+    console.warn('Failed to stream Kivo answer', error);
+    const answer = await askKivoAi({ message, photo, history });
+    await playFallbackTypewriter(answer, onDelta);
+    return answer;
   }
 }
 
