@@ -37,17 +37,6 @@ type RecentItemProps = {
 
 const SIDEBAR_BACKGROUND = '#f4f4f6';
 
-const FALLBACK_RECENTS: KivoNativeConversation[] = [
-  { id: 'fallback-email', title: 'Katso minun viimeisimmät sähköpo...' },
-  { id: 'fallback-calendar', title: 'Lisää tapahtuma minun kalenteriin ...' },
-  { id: 'fallback-tools', title: 'Mitä työkaluja pystyt käyttämään ja...' },
-  { id: 'fallback-image-1', title: 'Mitä näet tässä kuvassa' },
-  { id: 'fallback-image-2', title: 'Mitä näet tässä kuvassa' },
-  { id: 'fallback-build', title: 'Miten voin tehdä oman sovelluksen' },
-  { id: 'fallback-native', title: 'Tee Kivo Native valmiiksi' },
-  { id: 'fallback-sidebar', title: 'Viimeistellään sivuvalikko täysin' },
-];
-
 function clamp(value: number, min = 0, max = 1) {
   return Math.min(max, Math.max(min, value));
 }
@@ -68,7 +57,7 @@ export function KivoSidebarOverlay({
   const [actionConversation, setActionConversation] = useState<KivoNativeConversation | null>(null);
   const dragStartTimeRef = useRef(0);
   const dragModeRef = useRef<'idle' | 'horizontal' | 'vertical'>('idle');
-  const recentItems = conversations.length ? conversations.slice(0, 12) : FALLBACK_RECENTS;
+  const recentItems = conversations.slice(0, 18);
   const translateX = progress.interpolate({
     inputRange: [0, 1],
     outputRange: [-drawerWidth - 34, 0],
@@ -85,7 +74,6 @@ export function KivoSidebarOverlay({
   }
 
   function handleOpenConversation(id: string) {
-    if (id.startsWith('fallback-')) return;
     setActionConversation(null);
     onOpenConversation?.(id);
     onClose();
@@ -169,7 +157,7 @@ export function KivoSidebarOverlay({
             contentContainerStyle={styles.scrollContent}
           >
             <View style={styles.nav}>
-              <MenuItem icon="home" label="Home" active onPress={closeMenu} />
+              <MenuItem icon="home" label="Home" active={!activeConversationId} onPress={closeMenu} />
               <MenuItem icon="calendar" label="Today" onPress={closeMenu} />
               <MenuItem icon="file-text" label="Library" onPress={closeMenu} />
             </View>
@@ -177,18 +165,22 @@ export function KivoSidebarOverlay({
             <View style={styles.divider} />
 
             <View style={styles.recentList}>
-              {recentItems.map((item) => (
-                <RecentItem
-                  key={item.id}
-                  title={item.title}
-                  active={activeConversationId === item.id}
-                  onPress={() => handleOpenConversation(item.id)}
-                  onLongPress={() => {
-                    if (item.id.startsWith('fallback-')) return;
-                    setActionConversation(item);
-                  }}
-                />
-              ))}
+              {recentItems.length > 0 ? (
+                recentItems.map((item) => (
+                  <RecentItem
+                    key={item.id}
+                    title={item.title}
+                    active={activeConversationId === item.id}
+                    onPress={() => handleOpenConversation(item.id)}
+                    onLongPress={() => setActionConversation(item)}
+                  />
+                ))
+              ) : (
+                <View style={styles.emptyHistory}>
+                  <Text style={styles.emptyTitle}>No conversations yet</Text>
+                  <Text style={styles.emptyText}>Your chats will appear here after the first message.</Text>
+                </View>
+              )}
             </View>
           </ScrollView>
 
@@ -248,7 +240,7 @@ function RecentItem({ title, active = false, onPress, onLongPress }: RecentItemP
 
 function ConversationActionSheet({ conversation, bottomInset, onClose }: { conversation: KivoNativeConversation; bottomInset: number; onClose: () => void }) {
   return (
-    <View style={[styles.actionLayer, { paddingBottom: bottomInset + 18 }]}> 
+    <View style={[styles.actionLayer, { paddingBottom: bottomInset + 18 }]}>
       <Pressable style={styles.actionBackdrop} onPress={onClose} />
       <View style={styles.actionSheet}>
         <Text numberOfLines={1} style={styles.actionTitle}>{conversation.title || 'Untitled conversation'}</Text>
@@ -373,7 +365,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   recentItemActive: {
-    backgroundColor: 'rgba(255,255,255,0.52)',
+    backgroundColor: 'rgba(255,255,255,0.62)',
   },
   recentText: {
     color: '#2b2c31',
@@ -381,6 +373,24 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: -0.43,
     lineHeight: 19.5,
+  },
+  emptyHistory: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  emptyTitle: {
+    color: '#1b1c20',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.4,
+  },
+  emptyText: {
+    maxWidth: 230,
+    color: '#8b8d94',
+    fontSize: 14,
+    lineHeight: 19,
+    letterSpacing: -0.28,
   },
   footer: {
     paddingHorizontal: 36,
