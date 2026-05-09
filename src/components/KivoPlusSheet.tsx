@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import * as MediaLibrary from 'expo-media-library';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Image, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +22,11 @@ type ConnectorItem = NativeConnector & {
 };
 
 type SheetSnap = 'peek' | 'expanded' | 'closed';
+
+type RecentPhoto = {
+  id: string;
+  uri: string;
+};
 
 const actions: ActionItem[] = [
   { title: 'Add files', icon: 'folder-plus' },
@@ -87,6 +93,8 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
   const expandedHeight = height - Math.max(insets.top + 10, 48);
   const [expanded, setExpanded] = useState(false);
   const [selectedConnector, setSelectedConnector] = useState<ConnectorItem | null>(null);
+  const [recentPhotos, setRecentPhotos] = useState<RecentPhoto[]>([]);
+  const [photoPermission, setPhotoPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown');
   const expandedRef = useRef(false);
   const scrollYRef = useRef(0);
   const sheetHeight = useRef(new Animated.Value(peekHeight)).current;
@@ -95,6 +103,35 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
   const currentTranslateRef = useRef(height);
   const gestureStartHeightRef = useRef(peekHeight);
   const gestureModeRef = useRef<'idle' | 'sheet' | 'scroll'>('idle');
+
+  async function loadRecentPhotos() {
+    try {
+      const permission = await MediaLibrary.getPermissionsAsync();
+      let nextPermission = permission;
+
+      if (!permission.granted && permission.canAskAgain) {
+        nextPermission = await MediaLibrary.requestPermissionsAsync();
+      }
+
+      if (!nextPermission.granted) {
+        setPhotoPermission('denied');
+        setRecentPhotos([]);
+        return;
+      }
+
+      setPhotoPermission('granted');
+      const result = await MediaLibrary.getAssetsAsync({
+        first: 12,
+        mediaType: MediaLibrary.MediaType.photo,
+        sortBy: [MediaLibrary.SortBy.creationTime],
+      });
+
+      setRecentPhotos(result.assets.map((asset) => ({ id: asset.id, uri: asset.uri })));
+    } catch {
+      setPhotoPermission('denied');
+      setRecentPhotos([]);
+    }
+  }
 
   function updateExpanded(nextExpanded: boolean) {
     if (expandedRef.current === nextExpanded) return;
@@ -246,6 +283,7 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
     currentTranslateRef.current = height + 40;
     sheetHeight.setValue(peekHeight);
     translateY.setValue(height + 40);
+    loadRecentPhotos();
     requestAnimationFrame(() => animateToSnap('peek'));
   }, [height, onExpandedChange, open, peekHeight, sheetHeight, translateY]);
 
@@ -284,10 +322,16 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
           contentContainerStyle={styles.scrollContent}
         >
           <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false} contentContainerStyle={styles.previewRow}>
-            <PreviewTile large />
-            <PreviewTile />
-            <PreviewTile />
-            <PreviewTile />
+            <PreviewTile large permission={photoPermission} onPress={loadRecentPhotos} />
+            {recentPhotos.length > 0 ? (
+              recentPhotos.map((photo) => <PreviewTile key={photo.id} photoUri={photo.uri} />)
+            ) : (
+              <>
+                <PreviewTile />
+                <PreviewTile />
+                <PreviewTile />
+              </>
+            )}
           </ScrollView>
 
           <View style={styles.actionsList}>
@@ -316,10 +360,17 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
   );
 }
 
-function PreviewTile({ large = false }: { large?: boolean }) {
+function PreviewTile({ large = false, photoUri, permission, onPress }: { large?: boolean; photoUri?: string; permission?: 'unknown' | 'granted' | 'denied'; onPress?: () => void }) {
   return (
-    <Pressable style={({ pressed }) => [styles.previewTile, large ? styles.previewTileLarge : styles.previewTileWide, pressed && styles.pressed]}>
-      {large ? <Feather name="camera" size={38} color="#5a5a5e" strokeWidth={2.15} /> : null}
+    <Pressable style={({ pressed }) => [styles.previewTile, large ? styles.previewTileLarge : styles.previewTileWide, pressed && styles.pressed]} onPress={onPress}>
+      {photoUri ? (
+        <Image source={{ uri: photoUri }} style={styles.photoPreview} resizeMode="cover" />
+      ) : large ? (
+        <View style={styles.cameraTileContent}>
+          <Feather name="camera" size={34} color="#4f5055" strokeWidth={2.05} />
+          {permission === 'denied' ? <Text style={styles.cameraTileLabel}>Allow photos</Text> : null}
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -434,12 +485,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f8f9',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   previewTileLarge: {
     width: 98,
   },
   previewTileWide: {
     width: 112,
+  },
+  photoPreview: {
+    width: '100%',
+    height: '100%',
+  },
+  cameraTileContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 9,
+  },
+  cameraTileLabel: {
+    color: '#4f5055',
+    fontSize: 11.5,
+    fontWeight: '500',
+    letterSpacing: -0.28,
   },
   actionsList: {
     gap: 1,
