@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { buildKivoMemoryContext, saveInferredMemoriesFromMessage } from './kivo-memory';
 import type { RecentPhoto } from '../components/KivoPlusSheet';
 
 export type KivoChatMessageInput = {
@@ -17,6 +18,7 @@ type KivoChatFunctionResponse = {
   title?: string;
   model?: string;
   usedVision?: boolean;
+  usedMemory?: boolean;
   error?: string;
 };
 
@@ -108,16 +110,53 @@ async function getFunctionHeaders() {
   };
 }
 
+async function buildMemoryPayload(message: string) {
+  try {
+    const memoryContext = await buildKivoMemoryContext(message, {
+      limit: 8,
+      markUsed: true,
+    });
+
+    return {
+      memoryContext: memoryContext.contextText || undefined,
+      memoryCount: memoryContext.memories.length,
+    };
+  } catch (error) {
+    console.warn('Failed to build Kivo memory context', error);
+    return {
+      memoryContext: undefined,
+      memoryCount: 0,
+    };
+  }
+}
+
+async function savePossibleMemories(message: string) {
+  try {
+    await saveInferredMemoriesFromMessage(message, {
+      metadata: {
+        capturedBy: 'kivo-ai-client',
+      },
+    });
+  } catch (error) {
+    console.warn('Failed to save inferred Kivo memories', error);
+  }
+}
+
 export async function askKivoAi({ message, photo, history = [] }: KivoChatRequest) {
   try {
+    const memoryPayload = await buildMemoryPayload(message);
+
     const { data, error } = await supabase.functions.invoke<KivoChatFunctionResponse>('kivo-chat', {
       body: {
         mode: 'chat',
         message,
         history,
+        ...memoryPayload,
         ...buildPhotoPayload(photo),
       },
     });
+
+    void savePossibleMemories(message);
 
     if (error) {
       console.warn('kivo-chat function error', error);
@@ -144,6 +183,8 @@ export async function askKivoAiStream({ message, photo, history = [], onDelta }:
   }
 
   try {
+    const memoryPayload = await buildMemoryPayload(message);
+
     const response = await fetch(`${supabaseUrl}/functions/v1/kivo-chat`, {
       method: 'POST',
       headers: await getFunctionHeaders(),
@@ -152,6 +193,7 @@ export async function askKivoAiStream({ message, photo, history = [], onDelta }:
         stream: true,
         message,
         history,
+        ...memoryPayload,
         ...buildPhotoPayload(photo),
       }),
     });
@@ -168,6 +210,7 @@ export async function askKivoAiStream({ message, photo, history = [], onDelta }:
       const answer = await response.text();
       const cleanAnswer = answer.trim() || buildFallbackAnswer(message, photo);
       await playFallbackTypewriter(cleanAnswer, onDelta);
+      void savePossibleMemories(message);
       return cleanAnswer;
     }
 
@@ -199,6 +242,7 @@ export async function askKivoAiStream({ message, photo, history = [], onDelta }:
       return fallback;
     }
 
+    void savePossibleMemories(message);
     return cleanAnswer;
   } catch (error) {
     console.warn('Failed to stream Kivo answer', error);
