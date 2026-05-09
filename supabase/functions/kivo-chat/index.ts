@@ -23,6 +23,7 @@ type VisionChatMessage = {
 
 type KivoChatBody = {
   mode?: 'chat' | 'title';
+  stream?: boolean;
   message?: string;
   history?: Array<{
     role?: 'user' | 'assistant';
@@ -100,6 +101,28 @@ function buildImageDataUrl(base64: string, mimeType: string) {
   return `data:${mimeType};base64,${base64}`;
 }
 
+function makeGroqPayload({
+  model,
+  messages,
+  temperature = 0.42,
+  maxTokens = 420,
+  stream = false,
+}: {
+  model: string;
+  messages: VisionChatMessage[];
+  temperature?: number;
+  maxTokens?: number;
+  stream?: boolean;
+}) {
+  return {
+    model,
+    messages,
+    temperature,
+    max_tokens: maxTokens,
+    stream,
+  };
+}
+
 async function callGroq({
   groqApiKey,
   model,
@@ -119,12 +142,7 @@ async function callGroq({
       Authorization: `Bearer ${groqApiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-    }),
+    body: JSON.stringify(makeGroqPayload({ model, messages, temperature, maxTokens })),
   });
 
   const groqData = await groqResponse.json();
@@ -148,6 +166,162 @@ async function callGroq({
   }
 
   return { content, status: 200 };
+}
+
+async function callGroqStream({
+  groqApiKey,
+  model,
+  messages,
+  temperature = 0.42,
+  maxTokens = 420,
+}: {
+  groqApiKey: string;
+  model: string;
+  messages: VisionChatMessage[];
+  temperature?: number;
+  maxTokens?: number;
+}) {
+  const groqResponse = await fetch(GROQ_CHAT_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${groqApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(makeGroqPayload({ model, messages, temperature, maxTokens, stream: true })),
+  });
+
+  if (!groqResponse.ok || !groqResponse.body) {
+    let details: unknown = null;
+    try {
+      details = await groqResponse.json();
+    } catch {
+      details = await groqResponse.text();
+    }
+
+    return jsonResponse(
+      {
+        error: typeof details === 'object' && details !== null && 'error' in details
+          ? (details as { error?: { message?: string } }).error?.message ?? 'Groq stream request failed.'
+          : 'Groq stream request failed.',
+        details,
+      },
+      502,
+    );
+  }
+
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let buffer = '';
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const reader = groqResponse.body!.getReader();
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+
+          for (const rawLine of lines) {
+            const line = rawLine.trim();
+            if (!line.startsWith('data:')) continue;
+
+            const payload = line.replace(/^data:\s*/, '');
+            if (!payload || payload === '[DONE]') continue;
+
+            try {
+              const parsed = JSON.parse(payload);
+              const delta = parsed?.choices?.[0]?.delta?.content;
+              if (typeof delta === 'string' && delta.length > 0) {
+                controller.enqueue(encoder.encode(delta));
+              }
+            } catch {
+              // Ignore malformed stream lines and continue reading.
+            }
+          }
+        }
+      } catch {
+        controller.enqueue(encoder.encode('\n\nKivo stream ended unexpectedly.'));
+      } finally {
+        controller.close();
+        reader.releaseLock();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    },
+  });
+}
+
+function buildMessages({
+  userMessage,
+  imageBase64,
+  imageMimeType,
+  history,
+}: {
+  userMessage: string;
+  imageBase64: string;
+  imageMimeType: string;
+  history: KivoChatBody['history'];
+}) {
+  const hasImage = Boolean(imageBase64);
+  const systemPrompt = hasImage
+    ? [
+        'You are Kivo, a premium personal AI operator inside a mobile app.',
+        'You can analyze the attached image.',
+        'Match the user language. If the user writes Finnish, answer in Finnish. If English, answer in English.',
+        'Be concise, practical, and useful.',
+        'Start with what is clearly visible in the image.',
+        'Then answer the user request directly.',
+        'For screenshots, identify the app/page, visible errors, buttons, and the likely next action.',
+        'If something is uncertain, say it briefly instead of guessing too hard.',
+        'Use short paragraphs or bullets. Tables are allowed only when they help.',
+      ].join(' ')
+    : [
+        'You are Kivo, a premium personal AI operator inside a mobile app.',
+        'Match the user language. If the user writes Finnish, answer in Finnish. If English, answer in English.',
+        'Your default style is concise, calm, smart, and mobile-first.',
+        'For simple questions, answer in 1-3 short sentences. Do not sound like Wikipedia or a school essay.',
+        'For planning, coding, or product-building questions, give a clear next step and keep the answer practical.',
+        'Do not over-explain unless the user asks for more detail.',
+        'Avoid long paragraphs. Use short paragraphs that feel good in a chat UI.',
+        'Use markdown only when it genuinely improves readability.',
+      ].join(' ');
+
+  const messages: VisionChatMessage[] = [
+    { role: 'system', content: systemPrompt },
+    ...normalizeHistory(history),
+  ];
+
+  if (hasImage) {
+    messages.push({
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: userMessage || 'Analyze this image.',
+        },
+        {
+          type: 'image_url',
+          image_url: { url: buildImageDataUrl(imageBase64, imageMimeType) },
+        },
+      ],
+    });
+  } else {
+    messages.push({ role: 'user', content: userMessage });
+  }
+
+  return messages;
 }
 
 Deno.serve(async (request) => {
@@ -248,56 +422,28 @@ Deno.serve(async (request) => {
     });
   }
 
-  const systemPrompt = hasImage
-    ? [
-        'You are Kivo, a premium personal AI operator inside a mobile app.',
-        'You can analyze the attached image.',
-        'Match the user language. If the user writes Finnish, answer in Finnish. If English, answer in English.',
-        'Be concise, practical, and useful.',
-        'Start with what is clearly visible in the image.',
-        'Then answer the user request directly.',
-        'For screenshots, identify the app/page, visible errors, buttons, and the likely next action.',
-        'If something is uncertain, say it briefly instead of guessing too hard.',
-        'Use short paragraphs or bullets. Tables are allowed only when they help.',
-      ].join(' ')
-    : [
-        'You are Kivo, a premium personal AI operator inside a mobile app.',
-        'Match the user language. If the user writes Finnish, answer in Finnish. If English, answer in English.',
-        'Your default style is concise, calm, smart, and mobile-first.',
-        'For simple questions, answer in 1-3 short sentences. Do not sound like Wikipedia or a school essay.',
-        'For planning, coding, or product-building questions, give a clear next step and keep the answer practical.',
-        'Do not over-explain unless the user asks for more detail.',
-        'Avoid long paragraphs. Use short paragraphs that feel good in a chat UI.',
-        'Use markdown only when it genuinely improves readability.',
-      ].join(' ');
+  const messages = buildMessages({
+    userMessage,
+    imageBase64,
+    imageMimeType,
+    history: body.history,
+  });
+  const model = hasImage ? DEFAULT_VISION_MODEL : DEFAULT_CHAT_MODEL;
 
-  const messages: VisionChatMessage[] = [
-    { role: 'system', content: systemPrompt },
-    ...normalizeHistory(body.history),
-  ];
-
-  if (hasImage) {
-    messages.push({
-      role: 'user',
-      content: [
-        {
-          type: 'text',
-          text: userMessage || 'Analyze this image.',
-        },
-        {
-          type: 'image_url',
-          image_url: { url: buildImageDataUrl(imageBase64, imageMimeType) },
-        },
-      ],
+  if (body.stream) {
+    return callGroqStream({
+      groqApiKey,
+      model,
+      messages,
+      temperature: 0.42,
+      maxTokens: hasImage ? 620 : 420,
     });
-  } else {
-    messages.push({ role: 'user', content: userMessage });
   }
 
   try {
     const result = await callGroq({
       groqApiKey,
-      model: hasImage ? DEFAULT_VISION_MODEL : DEFAULT_CHAT_MODEL,
+      model,
       messages,
       temperature: 0.42,
       maxTokens: hasImage ? 620 : 420,
@@ -309,7 +455,7 @@ Deno.serve(async (request) => {
 
     return jsonResponse({
       answer: result.content,
-      model: hasImage ? DEFAULT_VISION_MODEL : DEFAULT_CHAT_MODEL,
+      model,
       usedVision: hasImage,
     });
   } catch (error) {
