@@ -7,9 +7,10 @@ import { colors } from '../theme/colors';
 type Props = {
   onSubmit?: (message: string) => void;
   onOpenPlus?: () => void;
+  onComposingChange?: (composing: boolean) => void;
 };
 
-export function KivoComposer({ onSubmit, onOpenPlus }: Props) {
+export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange }: Props) {
   const insets = useSafeAreaInsets();
   const [value, setValue] = useState('');
   const [keyboardOpen, setKeyboardOpen] = useState(false);
@@ -36,6 +37,10 @@ export function KivoComposer({ onSubmit, onOpenPlus }: Props) {
     dismissKeyboard();
     onOpenPlus?.();
   }
+
+  useEffect(() => {
+    onComposingChange?.(keyboardOpen || value.trim().length > 0);
+  }, [keyboardOpen, onComposingChange, value]);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -79,6 +84,13 @@ export function KivoComposer({ onSubmit, onOpenPlus }: Props) {
           ref={inputRef}
           value={value}
           onChangeText={setValue}
+          onFocus={() => {
+            setKeyboardOpen(true);
+            onComposingChange?.(true);
+          }}
+          onBlur={() => {
+            if (value.trim().length === 0) onComposingChange?.(false);
+          }}
           placeholder="Ask anything or assign a task"
           placeholderTextColor="#a9a9b0"
           multiline
