@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Image, Keyboard, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, Image, Keyboard, PanResponder, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { askKivoAi } from '../lib/kivo-ai';
@@ -18,6 +18,11 @@ type ChatMessage = {
   photo?: RecentPhoto | null;
 };
 
+type TableBlock = {
+  header: string[];
+  rows: string[][];
+};
+
 const sampleConversations = [
   { id: 'recent-email', title: 'Katso minun viimeisimmät sähköpo...' },
   { id: 'recent-calendar', title: 'Lisää tapahtuma minun kalenteriin ...' },
@@ -31,6 +36,156 @@ const sampleConversations = [
 
 function clamp(value: number, min = 0, max = 1) {
   return Math.min(max, Math.max(min, value));
+}
+
+function isTableLine(line: string) {
+  return line.includes('|') && line.split('|').filter((cell) => cell.trim().length > 0).length >= 2;
+}
+
+function isTableDivider(line: string) {
+  return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
+}
+
+function parseTable(lines: string[]): TableBlock | null {
+  const cleanRows = lines
+    .filter((line) => !isTableDivider(line))
+    .map((line) => line.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map((cell) => cell.trim()))
+    .filter((row) => row.length >= 2);
+
+  if (cleanRows.length < 2) return null;
+
+  const [header, ...rows] = cleanRows;
+  return { header, rows };
+}
+
+function renderInlineText(text: string, keyPrefix: string, style = styles.assistantText) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+
+  return parts.map((part, index) => {
+    const isBold = part.startsWith('**') && part.endsWith('**') && part.length > 4;
+    const value = isBold ? part.slice(2, -2) : part;
+
+    return (
+      <Text key={`${keyPrefix}-${index}`} style={[style, isBold && styles.assistantBold]}>
+        {value}
+      </Text>
+    );
+  });
+}
+
+function KivoTableBlock({ table }: { table: TableBlock }) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false} style={styles.tableScroller} contentContainerStyle={styles.tableContent}>
+      <View style={styles.table}>
+        <View style={[styles.tableRow, styles.tableHeaderRow]}>
+          {table.header.map((cell, index) => (
+            <View key={`header-${index}`} style={styles.tableCell}>
+              <Text style={styles.tableHeaderText}>{renderInlineText(cell, `table-header-${index}`, styles.tableHeaderText)}</Text>
+            </View>
+          ))}
+        </View>
+
+        {table.rows.map((row, rowIndex) => (
+          <View key={`row-${rowIndex}`} style={styles.tableRow}>
+            {table.header.map((_, cellIndex) => (
+              <View key={`cell-${rowIndex}-${cellIndex}`} style={styles.tableCell}>
+                <Text style={styles.tableCellText}>{renderInlineText(row[cellIndex] ?? '', `table-cell-${rowIndex}-${cellIndex}`, styles.tableCellText)}</Text>
+              </View>
+            ))}
+          </View>
+        ))}
+      </View>
+    </ScrollView>
+  );
+}
+
+function KivoAssistantContent({ text }: { text: string }) {
+  const lines = text.split('\n');
+  const blocks: JSX.Element[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const rawLine = lines[index];
+    const line = rawLine.trim();
+
+    if (!line) {
+      index += 1;
+      continue;
+    }
+
+    if (isTableLine(line)) {
+      const tableLines: string[] = [];
+
+      while (index < lines.length && isTableLine(lines[index].trim())) {
+        tableLines.push(lines[index].trim());
+        index += 1;
+      }
+
+      const table = parseTable(tableLines);
+      if (table) {
+        blocks.push(<KivoTableBlock key={`table-${index}`} table={table} />);
+        continue;
+      }
+    }
+
+    const headingMatch = line.match(/^#{1,3}\s+(.+)$/);
+    if (headingMatch) {
+      blocks.push(
+        <Text key={`heading-${index}`} style={styles.assistantHeading}>
+          {renderInlineText(headingMatch[1], `heading-${index}`, styles.assistantHeading)}
+        </Text>,
+      );
+      index += 1;
+      continue;
+    }
+
+    const bulletMatch = line.match(/^[-*]\s+(.+)$/);
+    if (bulletMatch) {
+      blocks.push(
+        <View key={`bullet-${index}`} style={styles.bulletRow}>
+          <Text style={styles.bulletDot}>•</Text>
+          <Text style={styles.bulletText}>{renderInlineText(bulletMatch[1], `bullet-${index}`, styles.bulletText)}</Text>
+        </View>,
+      );
+      index += 1;
+      continue;
+    }
+
+    const numberMatch = line.match(/^(\d+)\.\s+(.+)$/);
+    if (numberMatch) {
+      blocks.push(
+        <View key={`number-${index}`} style={styles.bulletRow}>
+          <Text style={styles.numberDot}>{numberMatch[1]}.</Text>
+          <Text style={styles.bulletText}>{renderInlineText(numberMatch[2], `number-${index}`, styles.bulletText)}</Text>
+        </View>,
+      );
+      index += 1;
+      continue;
+    }
+
+    const paragraphLines = [line];
+    index += 1;
+
+    while (
+      index < lines.length &&
+      lines[index].trim().length > 0 &&
+      !isTableLine(lines[index].trim()) &&
+      !/^#{1,3}\s+/.test(lines[index].trim()) &&
+      !/^[-*]\s+/.test(lines[index].trim()) &&
+      !/^(\d+)\.\s+/.test(lines[index].trim())
+    ) {
+      paragraphLines.push(lines[index].trim());
+      index += 1;
+    }
+
+    blocks.push(
+      <Text key={`paragraph-${index}`} style={styles.assistantText}>
+        {renderInlineText(paragraphLines.join(' '), `paragraph-${index}`)}
+      </Text>,
+    );
+  }
+
+  return <View style={styles.assistantContent}>{blocks}</View>;
 }
 
 function KivoThinkingLine() {
@@ -95,6 +250,11 @@ export function KivoChatScreen() {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const chatScrollRef = useRef<ScrollView>(null);
+  const chatContentHeightRef = useRef(0);
+  const chatViewportHeightRef = useRef(0);
+  const chatScrollYRef = useRef(0);
+  const shouldStickToBottomRef = useRef(true);
+  const userDraggingChatRef = useRef(false);
   const appScale = useRef(new Animated.Value(1)).current;
   const appRadius = useRef(new Animated.Value(0)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -126,7 +286,19 @@ export function KivoChatScreen() {
     outputRange: [0, 22],
   });
 
-  function scrollChatToEnd(animated = true) {
+  function updateChatStickiness() {
+    const distanceFromBottom = chatContentHeightRef.current - chatViewportHeightRef.current - chatScrollYRef.current;
+    const isNearBottom = distanceFromBottom < 110;
+
+    if (isNearBottom) {
+      shouldStickToBottomRef.current = true;
+    } else if (userDraggingChatRef.current) {
+      shouldStickToBottomRef.current = false;
+    }
+  }
+
+  function scrollChatToEnd(animated = true, force = false) {
+    if (!force && !shouldStickToBottomRef.current) return;
     if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
 
     scrollTimerRef.current = setTimeout(() => {
@@ -256,13 +428,14 @@ export function KivoChatScreen() {
     const requestId = requestIdRef.current + 1;
 
     requestIdRef.current = requestId;
+    shouldStickToBottomRef.current = true;
     if (responseTimerRef.current) clearTimeout(responseTimerRef.current);
 
     setMessages((current) => [...current, userMessage]);
     setSelectedPhoto(null);
     setComposerActive(false);
     setAssistantThinking(true);
-    scrollChatToEnd(true);
+    scrollChatToEnd(true, true);
 
     const startedAt = Date.now();
     const answer = await askKivoAi({
@@ -322,6 +495,7 @@ export function KivoChatScreen() {
     if (responseTimerRef.current) clearTimeout(responseTimerRef.current);
     if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
     requestIdRef.current += 1;
+    shouldStickToBottomRef.current = true;
     setAssistantThinking(false);
     setMessages([]);
     setSelectedPhoto(null);
@@ -406,13 +580,13 @@ export function KivoChatScreen() {
         ]}
         {...screenPanResponder.panHandlers}
       >
-        {sidebarOpen ? <Pressable accessibilityRole="button" accessibilityLabel="Close menu" style={styles.sidebarDismissLayer} onPress={closeSidebar} /> : null}
+        {sidebarOpen ? <View accessibilityRole="button" accessibilityLabel="Close menu" style={styles.sidebarDismissLayer} onTouchEnd={closeSidebar} /> : null}
 
         <View style={[styles.topBar, { paddingTop: insets.top + 6 }]}>
           <KivoTopBar onOpenMenu={openSidebar} onOpenModes={() => Keyboard.dismiss()} />
         </View>
 
-        <Pressable style={styles.contentDismissLayer} onPress={Keyboard.dismiss}>
+        <View style={styles.contentDismissLayer}>
           {messages.length === 0 ? (
             <Animated.View
               pointerEvents={shouldShowTodayDashboard ? 'auto' : 'none'}
@@ -427,8 +601,32 @@ export function KivoChatScreen() {
               contentContainerStyle={[styles.chatPreviewContent, { paddingTop: insets.top + 86 }]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-              onContentSizeChange={() => scrollChatToEnd(true)}
-              onLayout={() => scrollChatToEnd(false)}
+              scrollEventThrottle={16}
+              onScrollBeginDrag={() => {
+                userDraggingChatRef.current = true;
+              }}
+              onScroll={(event) => {
+                chatScrollYRef.current = event.nativeEvent.contentOffset.y;
+                chatViewportHeightRef.current = event.nativeEvent.layoutMeasurement.height;
+                chatContentHeightRef.current = event.nativeEvent.contentSize.height;
+                updateChatStickiness();
+              }}
+              onScrollEndDrag={() => {
+                updateChatStickiness();
+                userDraggingChatRef.current = false;
+              }}
+              onMomentumScrollEnd={() => {
+                updateChatStickiness();
+                userDraggingChatRef.current = false;
+              }}
+              onContentSizeChange={(_, height) => {
+                chatContentHeightRef.current = height;
+                scrollChatToEnd(true);
+              }}
+              onLayout={(event) => {
+                chatViewportHeightRef.current = event.nativeEvent.layout.height;
+                scrollChatToEnd(false);
+              }}
             >
               {messages.map((message) => (
                 message.role === 'user' ? (
@@ -439,14 +637,14 @@ export function KivoChatScreen() {
                 ) : (
                   <View key={message.id} style={styles.assistantTextBlock}>
                     <Text style={styles.assistantName}>Kivo</Text>
-                    <Text style={styles.assistantText}>{message.text}</Text>
+                    <KivoAssistantContent text={message.text} />
                   </View>
                 )
               ))}
               {assistantThinking ? <KivoThinkingLine /> : null}
             </ScrollView>
           )}
-        </Pressable>
+        </View>
 
         <KivoComposer
           onSubmit={handleSubmit}
@@ -526,8 +724,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.25,
   },
   assistantTextBlock: {
-    maxWidth: '88%',
-    marginBottom: 18,
+    maxWidth: '92%',
+    marginBottom: 20,
     paddingLeft: 2,
   },
   assistantName: {
@@ -537,11 +735,98 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.25,
   },
+  assistantContent: {
+    gap: 8,
+  },
   assistantText: {
     color: colors.text,
     fontSize: 16.2,
     lineHeight: 23,
     letterSpacing: -0.32,
+  },
+  assistantBold: {
+    color: '#111216',
+    fontWeight: '700',
+  },
+  assistantHeading: {
+    marginTop: 4,
+    color: '#111216',
+    fontSize: 17.5,
+    lineHeight: 23,
+    fontWeight: '700',
+    letterSpacing: -0.48,
+  },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  bulletDot: {
+    width: 14,
+    color: '#111216',
+    fontSize: 16.2,
+    lineHeight: 23,
+    fontWeight: '700',
+  },
+  numberDot: {
+    minWidth: 24,
+    color: '#111216',
+    fontSize: 16.2,
+    lineHeight: 23,
+    fontWeight: '700',
+  },
+  bulletText: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 16.2,
+    lineHeight: 23,
+    letterSpacing: -0.32,
+  },
+  tableScroller: {
+    marginTop: 4,
+    marginBottom: 4,
+    maxWidth: '100%',
+  },
+  tableContent: {
+    paddingRight: 18,
+  },
+  table: {
+    overflow: 'hidden',
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.64)',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0,0,0,0.07)',
+  },
+  tableHeaderRow: {
+    borderTopWidth: 0,
+    backgroundColor: 'rgba(0,0,0,0.035)',
+  },
+  tableCell: {
+    width: 132,
+    minHeight: 42,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: 'rgba(0,0,0,0.07)',
+  },
+  tableHeaderText: {
+    color: '#111216',
+    fontSize: 13.4,
+    lineHeight: 18,
+    fontWeight: '700',
+    letterSpacing: -0.22,
+  },
+  tableCellText: {
+    color: colors.text,
+    fontSize: 13.2,
+    lineHeight: 18,
+    letterSpacing: -0.2,
   },
   thinkingLine: {
     marginTop: 2,
