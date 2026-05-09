@@ -9,7 +9,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.kivo.native"
+      "bundleIdentifier": "com.kivo.native",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Kivo uses your photo library to show recent images in the plus menu so you can attach them to a chat."
+      }
     },
     "android": {
       "package": "com.kivo.native"
@@ -19,7 +22,8 @@
     },
     "plugins": [
       "expo-router",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "expo-media-library"
     ],
     "experiments": {
       "typedRoutes": true
