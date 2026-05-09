@@ -39,6 +39,7 @@ type KivoChatBody = {
 
 const GROQ_CHAT_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const DEFAULT_CHAT_MODEL = Deno.env.get('GROQ_CHAT_MODEL') ?? 'openai/gpt-oss-20b';
+const DEFAULT_SEARCH_MODEL = Deno.env.get('GROQ_SEARCH_MODEL') ?? 'groq/compound-mini';
 const DEFAULT_VISION_MODEL = Deno.env.get('GROQ_VISION_MODEL') ?? 'meta-llama/llama-4-scout-17b-16e-instruct';
 const MAX_IMAGE_BASE64_CHARS = 4_000_000;
 
@@ -123,6 +124,91 @@ function makeGroqPayload({
     max_tokens: maxTokens,
     stream,
   };
+}
+
+function shouldUseSmartSearch(userMessage: string) {
+  const text = userMessage.toLowerCase();
+  if (!text.trim()) return false;
+
+  const explicitSearchIntent = [
+    'etsi',
+    'hae netistä',
+    'hae verkosta',
+    'katso netistä',
+    'tarkista netistä',
+    'search web',
+    'web search',
+    'google',
+    'ajankohtaista tietoa',
+    'uusimmat tiedot',
+    'latest info',
+  ];
+
+  const freshnessTerms = [
+    'nyt',
+    'tällä hetkellä',
+    'uusin',
+    'uusimmat',
+    'viimeisin',
+    'viimeisimmät',
+    'tänään',
+    'tänä vuonna',
+    '2025',
+    '2026',
+    'current',
+    'latest',
+    'newest',
+    'recent',
+    'today',
+    'this year',
+  ];
+
+  const marketOrAvailabilityTerms = [
+    'hinta',
+    'maksaa',
+    'halvin',
+    'saatavilla',
+    'myynnissä',
+    'julkaistu',
+    'ostaa',
+    'kauppa',
+    'tilata',
+    'shipping',
+    'price',
+    'pricing',
+    'available',
+    'released',
+    'buy',
+    'order',
+  ];
+
+  const externalFactTerms = [
+    'groq',
+    'openai',
+    'expo',
+    'supabase',
+    'vercel',
+    'github',
+    'eas',
+    'app store',
+    'testflight',
+    'dokumentaatio',
+    'docs',
+    'malli',
+    'model',
+    'api',
+    'ar-lasit',
+    'ai-lasit',
+    'smart glasses',
+  ];
+
+  const hasUrl = /https?:\/\/|www\./i.test(userMessage);
+  const explicit = explicitSearchIntent.some((term) => text.includes(term));
+  const freshness = freshnessTerms.some((term) => text.includes(term));
+  const market = marketOrAvailabilityTerms.some((term) => text.includes(term));
+  const external = externalFactTerms.some((term) => text.includes(term));
+
+  return hasUrl || explicit || (external && (freshness || market)) || (freshness && market);
 }
 
 async function callGroq({
@@ -265,7 +351,7 @@ async function callGroqStream({
   });
 }
 
-function buildSystemPrompt(hasImage: boolean, memoryContext: string) {
+function buildSystemPrompt(hasImage: boolean, memoryContext: string, smartSearchEnabled: boolean) {
   const basePrompt = hasImage
     ? [
         'You are Kivo, a premium personal AI operator inside a mobile app.',
@@ -289,17 +375,27 @@ function buildSystemPrompt(hasImage: boolean, memoryContext: string) {
         'Use markdown only when it genuinely improves readability.',
       ];
 
-  if (!memoryContext) {
-    return basePrompt.join(' ');
+  const promptParts = [...basePrompt];
+
+  if (smartSearchEnabled) {
+    promptParts.push(
+      'You are running on Groq Compound with built-in web search available.',
+      'Use web search for current prices, availability, docs, model names, release status, recent news, and other time-sensitive external facts.',
+      'Prefer official documentation, product pages, changelogs, and reputable sources.',
+      'When web search affects the answer, include short source links at the end under "Sources". Keep the answer concise.',
+    );
   }
 
-  return [
-    ...basePrompt,
-    'Use the personal memory context below when it is relevant. Do not mention memory directly unless the user asks.',
-    'Prefer specific, context-aware advice over generic answers.',
-    'If memory conflicts with the current user message, trust the current message.',
-    `Personal memory context:\n${memoryContext}`,
-  ].join('\n');
+  if (memoryContext) {
+    promptParts.push(
+      'Use the personal memory context below when it is relevant. Do not mention memory directly unless the user asks.',
+      'Prefer specific, context-aware advice over generic answers.',
+      'If memory conflicts with the current user message, trust the current message.',
+      `Personal memory context:\n${memoryContext}`,
+    );
+  }
+
+  return promptParts.join('\n');
 }
 
 function buildMessages({
@@ -308,15 +404,17 @@ function buildMessages({
   imageMimeType,
   history,
   memoryContext,
+  smartSearchEnabled,
 }: {
   userMessage: string;
   imageBase64: string;
   imageMimeType: string;
   history: KivoChatBody['history'];
   memoryContext: string;
+  smartSearchEnabled: boolean;
 }) {
   const hasImage = Boolean(imageBase64);
-  const systemPrompt = buildSystemPrompt(hasImage, memoryContext);
+  const systemPrompt = buildSystemPrompt(hasImage, memoryContext, smartSearchEnabled);
 
   const messages: VisionChatMessage[] = [
     { role: 'system', content: systemPrompt },
@@ -373,6 +471,7 @@ Deno.serve(async (request) => {
   const imageBase64 = cleanBase64(body.imageBase64);
   const imageMimeType = cleanMimeType(body.imageMimeType);
   const hasImage = Boolean(imageBase64);
+  const smartSearchEnabled = !hasImage && body.mode !== 'title' && shouldUseSmartSearch(userMessage);
 
   if (imageBase64.length > MAX_IMAGE_BASE64_CHARS) {
     return jsonResponse({ error: 'Image is too large for analysis. Try a smaller screenshot or photo.' }, 413);
@@ -441,6 +540,7 @@ Deno.serve(async (request) => {
       model: hasImage ? DEFAULT_VISION_MODEL : DEFAULT_CHAT_MODEL,
       usedVision: hasImage,
       usedMemory: false,
+      usedSearch: false,
     });
   }
 
@@ -450,16 +550,18 @@ Deno.serve(async (request) => {
     imageMimeType,
     history: body.history,
     memoryContext,
+    smartSearchEnabled,
   });
-  const model = hasImage ? DEFAULT_VISION_MODEL : DEFAULT_CHAT_MODEL;
+  const model = hasImage ? DEFAULT_VISION_MODEL : smartSearchEnabled ? DEFAULT_SEARCH_MODEL : DEFAULT_CHAT_MODEL;
+  const maxTokens = hasImage ? 620 : smartSearchEnabled ? 760 : memoryContext ? 520 : 420;
 
   if (body.stream) {
     return callGroqStream({
       groqApiKey,
       model,
       messages,
-      temperature: 0.42,
-      maxTokens: hasImage ? 620 : memoryContext ? 520 : 420,
+      temperature: smartSearchEnabled ? 0.25 : 0.42,
+      maxTokens,
     });
   }
 
@@ -468,8 +570,8 @@ Deno.serve(async (request) => {
       groqApiKey,
       model,
       messages,
-      temperature: 0.42,
-      maxTokens: hasImage ? 620 : memoryContext ? 520 : 420,
+      temperature: smartSearchEnabled ? 0.25 : 0.42,
+      maxTokens,
     });
 
     if ('error' in result) {
@@ -481,6 +583,7 @@ Deno.serve(async (request) => {
       model,
       usedVision: hasImage,
       usedMemory: Boolean(memoryContext),
+      usedSearch: smartSearchEnabled,
     });
   } catch (error) {
     return jsonResponse(
