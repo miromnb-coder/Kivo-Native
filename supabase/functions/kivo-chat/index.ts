@@ -29,6 +29,8 @@ type KivoChatBody = {
     role?: 'user' | 'assistant';
     content?: string;
   }>;
+  memoryContext?: string;
+  memoryCount?: number;
   photoAttached?: boolean;
   imageBase64?: string;
   imageMimeType?: string;
@@ -263,19 +265,8 @@ async function callGroqStream({
   });
 }
 
-function buildMessages({
-  userMessage,
-  imageBase64,
-  imageMimeType,
-  history,
-}: {
-  userMessage: string;
-  imageBase64: string;
-  imageMimeType: string;
-  history: KivoChatBody['history'];
-}) {
-  const hasImage = Boolean(imageBase64);
-  const systemPrompt = hasImage
+function buildSystemPrompt(hasImage: boolean, memoryContext: string) {
+  const basePrompt = hasImage
     ? [
         'You are Kivo, a premium personal AI operator inside a mobile app.',
         'You can analyze the attached image.',
@@ -286,7 +277,7 @@ function buildMessages({
         'For screenshots, identify the app/page, visible errors, buttons, and the likely next action.',
         'If something is uncertain, say it briefly instead of guessing too hard.',
         'Use short paragraphs or bullets. Tables are allowed only when they help.',
-      ].join(' ')
+      ]
     : [
         'You are Kivo, a premium personal AI operator inside a mobile app.',
         'Match the user language. If the user writes Finnish, answer in Finnish. If English, answer in English.',
@@ -296,7 +287,36 @@ function buildMessages({
         'Do not over-explain unless the user asks for more detail.',
         'Avoid long paragraphs. Use short paragraphs that feel good in a chat UI.',
         'Use markdown only when it genuinely improves readability.',
-      ].join(' ');
+      ];
+
+  if (!memoryContext) {
+    return basePrompt.join(' ');
+  }
+
+  return [
+    ...basePrompt,
+    'Use the personal memory context below when it is relevant. Do not mention memory directly unless the user asks.',
+    'Prefer specific, context-aware advice over generic answers.',
+    'If memory conflicts with the current user message, trust the current message.',
+    `Personal memory context:\n${memoryContext}`,
+  ].join('\n');
+}
+
+function buildMessages({
+  userMessage,
+  imageBase64,
+  imageMimeType,
+  history,
+  memoryContext,
+}: {
+  userMessage: string;
+  imageBase64: string;
+  imageMimeType: string;
+  history: KivoChatBody['history'];
+  memoryContext: string;
+}) {
+  const hasImage = Boolean(imageBase64);
+  const systemPrompt = buildSystemPrompt(hasImage, memoryContext);
 
   const messages: VisionChatMessage[] = [
     { role: 'system', content: systemPrompt },
@@ -348,6 +368,7 @@ Deno.serve(async (request) => {
   }
 
   const userMessage = cleanText(body.message);
+  const memoryContext = cleanText(body.memoryContext, 6000);
   const photoAttached = Boolean(body.photoAttached);
   const imageBase64 = cleanBase64(body.imageBase64);
   const imageMimeType = cleanMimeType(body.imageMimeType);
@@ -419,6 +440,7 @@ Deno.serve(async (request) => {
       title,
       model: hasImage ? DEFAULT_VISION_MODEL : DEFAULT_CHAT_MODEL,
       usedVision: hasImage,
+      usedMemory: false,
     });
   }
 
@@ -427,6 +449,7 @@ Deno.serve(async (request) => {
     imageBase64,
     imageMimeType,
     history: body.history,
+    memoryContext,
   });
   const model = hasImage ? DEFAULT_VISION_MODEL : DEFAULT_CHAT_MODEL;
 
@@ -436,7 +459,7 @@ Deno.serve(async (request) => {
       model,
       messages,
       temperature: 0.42,
-      maxTokens: hasImage ? 620 : 420,
+      maxTokens: hasImage ? 620 : memoryContext ? 520 : 420,
     });
   }
 
@@ -446,7 +469,7 @@ Deno.serve(async (request) => {
       model,
       messages,
       temperature: 0.42,
-      maxTokens: hasImage ? 620 : 420,
+      maxTokens: hasImage ? 620 : memoryContext ? 520 : 420,
     });
 
     if ('error' in result) {
@@ -457,6 +480,7 @@ Deno.serve(async (request) => {
       answer: result.content,
       model,
       usedVision: hasImage,
+      usedMemory: Boolean(memoryContext),
     });
   } catch (error) {
     return jsonResponse(
