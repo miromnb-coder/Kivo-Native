@@ -115,9 +115,19 @@ function guessMimeType(uri: string, filename?: string | null) {
   return 'image/jpeg';
 }
 
+async function getAssetInfoWithLocalUri(asset: MediaLibrary.Asset | string) {
+  try {
+    return await MediaLibrary.getAssetInfoAsync(asset, {
+      shouldDownloadFromNetwork: true,
+    });
+  } catch {
+    return await MediaLibrary.getAssetInfoAsync(asset);
+  }
+}
+
 async function getReadablePhotoUri(photo: RecentPhoto) {
   try {
-    const info = await MediaLibrary.getAssetInfoAsync(photo.id);
+    const info = await getAssetInfoWithLocalUri(photo.id);
     const uri = info.localUri ?? info.uri ?? photo.uri;
     return uri || photo.uri;
   } catch {
@@ -130,6 +140,13 @@ async function readPhotoBase64(photo: RecentPhoto): Promise<RecentPhoto> {
 
   const readableUri = await getReadablePhotoUri(photo);
 
+  if (!readableUri || readableUri.startsWith('ph://')) {
+    return {
+      ...photo,
+      base64: null,
+    };
+  }
+
   try {
     const base64 = await FileSystem.readAsStringAsync(readableUri, {
       encoding: FileSystem.EncodingType.Base64,
@@ -137,6 +154,7 @@ async function readPhotoBase64(photo: RecentPhoto): Promise<RecentPhoto> {
 
     return {
       ...photo,
+      uri: readableUri,
       base64,
       mimeType: photo.mimeType ?? guessMimeType(readableUri, photo.name),
       name: photo.name ?? `${photo.id}.jpg`,
@@ -192,7 +210,7 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange, onSelectPhoto }
       const photos = await Promise.all(
         result.assets.map(async (asset) => {
           try {
-            const info = await MediaLibrary.getAssetInfoAsync(asset);
+            const info = await getAssetInfoWithLocalUri(asset);
             const uri = info.localUri ?? info.uri ?? asset.uri;
 
             return {
