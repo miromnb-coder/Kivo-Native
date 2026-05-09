@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
+import { generateKivoConversationTitle } from './kivo-ai';
 import type { RecentPhoto } from '@/components/KivoPlusSheet';
 
 export type KivoConversationSummary = {
@@ -64,6 +65,21 @@ function conversationFromRow(row: KivoConversationRow, fallbackTitle = 'New conv
 export function createConversationTitle(message: string, hasPhoto = false) {
   if (message.trim()) return normalizeTitle(message);
   return hasPhoto ? 'Image conversation' : 'New conversation';
+}
+
+async function createSmartConversationTitle(seedTitle: string) {
+  const fallback = normalizeTitle(seedTitle);
+
+  if (!seedTitle.trim() || seedTitle === 'New conversation') {
+    return fallback;
+  }
+
+  try {
+    const aiTitle = await generateKivoConversationTitle({ message: seedTitle, photo: null });
+    return normalizeTitle(aiTitle || fallback);
+  } catch {
+    return fallback;
+  }
 }
 
 function getPhotoFromAttachments(attachments: unknown): RecentPhoto | null {
@@ -225,7 +241,7 @@ export async function listKivoConversations(): Promise<KivoConversationSummary[]
 
 export async function createKivoConversation(title: string): Promise<KivoConversationSummary> {
   const userId = await getOrCreateKivoUserId();
-  const normalizedTitle = normalizeTitle(title);
+  const normalizedTitle = await createSmartConversationTitle(title);
 
   if (!userId) return createLocalConversation(normalizedTitle);
 
