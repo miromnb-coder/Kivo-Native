@@ -345,7 +345,7 @@ export function KivoPlusSheet({ open, onClose, onExpandedChange }: Props) {
             </Pressable>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false} contentContainerStyle={styles.previewRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false} style={styles.previewScroller} contentContainerStyle={styles.previewRow}>
             <PreviewTile large permission={photoPermission} onPress={loadRecentPhotos} />
             {recentPhotos.length > 0 ? (
               recentPhotos.map((photo) => <PreviewTile key={photo.id} photoUri={photo.uri} />)
@@ -519,11 +519,14 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: -0.7,
   },
+  previewScroller: {
+    marginHorizontal: -24,
+  },
   previewRow: {
     gap: 18,
-    paddingHorizontal: 10,
+    paddingLeft: 34,
+    paddingRight: 92,
     paddingBottom: 36,
-    marginHorizontal: -10,
   },
   previewTile: {
     height: 98,
