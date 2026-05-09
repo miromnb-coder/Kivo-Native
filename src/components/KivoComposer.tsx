@@ -70,6 +70,7 @@ export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selected
     inputRef.current?.blur();
     Keyboard.dismiss();
     setKeyboardOpen(false);
+    onComposingChange?.(hasAttachment);
     animateOffset(0, 220);
   }
 
@@ -84,8 +85,8 @@ export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selected
   }
 
   useEffect(() => {
-    onComposingChange?.(keyboardOpen || value.trim().length > 0 || hasAttachment);
-  }, [hasAttachment, keyboardOpen, onComposingChange, value]);
+    onComposingChange?.(keyboardOpen || hasAttachment);
+  }, [hasAttachment, keyboardOpen, onComposingChange]);
 
   useEffect(() => {
     if (value.length === 0) {
@@ -99,12 +100,14 @@ export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selected
 
     const show = Keyboard.addListener(showEvent, (event) => {
       setKeyboardOpen(true);
+      onComposingChange?.(true);
       const height = Math.max(0, event.endCoordinates.height - insets.bottom + 10);
       animateOffset(height, Platform.OS === 'ios' ? event.duration || 260 : 220);
     });
 
     const hide = Keyboard.addListener(hideEvent, (event) => {
       setKeyboardOpen(false);
+      onComposingChange?.(hasAttachment);
       animateOffset(0, Platform.OS === 'ios' ? event.duration || 240 : 220);
     });
 
@@ -112,7 +115,7 @@ export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selected
       show.remove();
       hide.remove();
     };
-  }, [insets.bottom, offset]);
+  }, [hasAttachment, insets.bottom, offset, onComposingChange]);
 
   function submit() {
     const message = value.trim();
@@ -124,6 +127,7 @@ export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selected
     onRemovePhoto?.();
     Keyboard.dismiss();
     setKeyboardOpen(false);
+    onComposingChange?.(false);
     animateOffset(0, 220);
   }
 
@@ -131,70 +135,82 @@ export function KivoComposer({ onSubmit, onOpenPlus, onComposingChange, selected
   const actionEnabled = canSend || keyboardOpen;
 
   return (
-    <Animated.View style={[styles.wrap, { paddingBottom: Math.max(18, insets.bottom - 10), transform: [{ translateY: Animated.multiply(offset, -1) }] }]}>
-      <View style={[styles.composer, { height: composerHeight }, hasAttachment && styles.composerWithAttachment]}>
-        {selectedPhoto ? (
-          <View style={styles.attachmentRow}>
-            <View style={styles.attachmentThumbWrap}>
-              <Image source={{ uri: selectedPhoto.uri }} style={styles.attachmentThumb} resizeMode="cover" />
-              <Pressable accessibilityRole="button" accessibilityLabel="Remove selected photo" hitSlop={8} style={({ pressed }) => [styles.removeAttachment, pressed && styles.pressed]} onPress={onRemovePhoto}>
-                <Feather name="x" size={13} color="#ffffff" strokeWidth={2.2} />
+    <View pointerEvents="box-none" style={styles.layer}>
+      {keyboardOpen ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Hide keyboard"
+          style={styles.dismissLayer}
+          onPress={dismissKeyboard}
+        />
+      ) : null}
+
+      <Animated.View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(18, insets.bottom - 10), transform: [{ translateY: Animated.multiply(offset, -1) }] }]}>
+        <View style={[styles.composer, { height: composerHeight }, hasAttachment && styles.composerWithAttachment]}>
+          {selectedPhoto ? (
+            <View style={styles.attachmentRow}>
+              <View style={styles.attachmentThumbWrap}>
+                <Image source={{ uri: selectedPhoto.uri }} style={styles.attachmentThumb} resizeMode="cover" />
+                <Pressable accessibilityRole="button" accessibilityLabel="Remove selected photo" hitSlop={8} style={({ pressed }) => [styles.removeAttachment, pressed && styles.pressed]} onPress={onRemovePhoto}>
+                  <Feather name="x" size={13} color="#ffffff" strokeWidth={2.2} />
+                </Pressable>
+              </View>
+              <View style={styles.attachmentCopy}>
+                <Text numberOfLines={1} style={styles.attachmentTitle}>Image selected</Text>
+                <Text numberOfLines={1} style={styles.attachmentSub}>Ready to send with your message</Text>
+              </View>
+            </View>
+          ) : null}
+
+          <TextInput
+            ref={inputRef}
+            value={value}
+            onChangeText={setValue}
+            onContentSizeChange={handleContentSizeChange}
+            onFocus={() => {
+              setKeyboardOpen(true);
+              onComposingChange?.(true);
+            }}
+            onBlur={() => {
+              setKeyboardOpen(false);
+              onComposingChange?.(hasAttachment);
+            }}
+            placeholder="Ask anything or assign a task"
+            placeholderTextColor="#a9a9b0"
+            multiline
+            scrollEnabled={inputScrollEnabled}
+            style={[styles.input, { height: inputHeight }]}
+            selectionColor={colors.text}
+            keyboardAppearance="light"
+            textAlignVertical="top"
+          />
+          <View style={[styles.controls, hasAttachment && styles.controlsWithAttachment]}>
+            <View style={styles.leftControls}>
+              <CircleButton icon="plus" onPress={openPlusSheet} />
+              <CircleButton icon="sliders" />
+            </View>
+            <View style={styles.rightControls}>
+              <CircleButton icon="message-circle" onPress={dismissKeyboard} />
+              <CircleButton icon="mic" />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={canSend ? 'Send message' : keyboardOpen ? 'Hide keyboard' : 'Send disabled'}
+                onPress={canSend ? submit : dismissKeyboard}
+                disabled={!actionEnabled}
+                style={({ pressed }) => [
+                  styles.circle,
+                  styles.sendButton,
+                  canSend ? styles.sendActive : styles.sendIdle,
+                  pressed && actionEnabled && styles.pressed,
+                ]}
+              >
+                <Feather name={actionIcon} size={21} color={canSend ? '#ffffff' : '#cfcfd4'} strokeWidth={1.85} />
               </Pressable>
             </View>
-            <View style={styles.attachmentCopy}>
-              <Text numberOfLines={1} style={styles.attachmentTitle}>Image selected</Text>
-              <Text numberOfLines={1} style={styles.attachmentSub}>Ready to send with your message</Text>
-            </View>
-          </View>
-        ) : null}
-
-        <TextInput
-          ref={inputRef}
-          value={value}
-          onChangeText={setValue}
-          onContentSizeChange={handleContentSizeChange}
-          onFocus={() => {
-            setKeyboardOpen(true);
-            onComposingChange?.(true);
-          }}
-          onBlur={() => {
-            if (value.trim().length === 0 && !hasAttachment) onComposingChange?.(false);
-          }}
-          placeholder="Ask anything or assign a task"
-          placeholderTextColor="#a9a9b0"
-          multiline
-          scrollEnabled={inputScrollEnabled}
-          style={[styles.input, { height: inputHeight }]}
-          selectionColor={colors.text}
-          keyboardAppearance="light"
-          textAlignVertical="top"
-        />
-        <View style={[styles.controls, hasAttachment && styles.controlsWithAttachment]}>
-          <View style={styles.leftControls}>
-            <CircleButton icon="plus" onPress={openPlusSheet} />
-            <CircleButton icon="sliders" />
-          </View>
-          <View style={styles.rightControls}>
-            <CircleButton icon="message-circle" onPress={dismissKeyboard} />
-            <CircleButton icon="mic" />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={canSend ? 'Send message' : keyboardOpen ? 'Hide keyboard' : 'Send disabled'}
-              onPress={canSend ? submit : dismissKeyboard}
-              disabled={!actionEnabled}
-              style={({ pressed }) => [
-                styles.circle,
-                styles.sendButton,
-                canSend ? styles.sendActive : styles.sendIdle,
-                pressed && actionEnabled && styles.pressed,
-              ]}
-            >
-              <Feather name={actionIcon} size={21} color={canSend ? '#ffffff' : '#cfcfd4'} strokeWidth={1.85} />
-            </Pressable>
           </View>
         </View>
-      </View>
-    </Animated.View>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -212,6 +228,14 @@ function CircleButton({ icon, onPress }: { icon: keyof typeof Feather.glyphMap; 
 }
 
 const styles = StyleSheet.create({
+  layer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 40,
+  },
+  dismissLayer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
+  },
   wrap: {
     position: 'absolute',
     left: 0,
