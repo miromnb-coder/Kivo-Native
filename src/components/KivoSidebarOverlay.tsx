@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Keyboard, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, Keyboard, KeyboardAvoidingView, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type KivoNativeConversation = {
@@ -292,6 +292,18 @@ function RecentItem({ title, active = false, onPress, onLongPress }: RecentItemP
   );
 }
 
+function ActionSurface({ children, bottomInset }: { children: React.ReactNode; bottomInset: number }) {
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={10}
+      style={[styles.actionLayer, { paddingBottom: bottomInset + 18 }]}
+    >
+      {children}
+    </KeyboardAvoidingView>
+  );
+}
+
 function ConversationActionSheet({
   conversation,
   bottomInset,
@@ -306,7 +318,7 @@ function ConversationActionSheet({
   onDelete: () => void;
 }) {
   return (
-    <View style={[styles.actionLayer, { paddingBottom: bottomInset + 18 }]}> 
+    <ActionSurface bottomInset={bottomInset}>
       <Pressable style={styles.actionBackdrop} onPress={onClose} />
       <View style={styles.actionSheet}>
         <Text numberOfLines={1} style={styles.actionTitle}>{conversation.title || 'Untitled conversation'}</Text>
@@ -323,7 +335,7 @@ function ConversationActionSheet({
           <Text style={styles.cancelText}>Cancel</Text>
         </Pressable>
       </View>
-    </View>
+    </ActionSurface>
   );
 }
 
@@ -344,7 +356,7 @@ function RenameConversationSheet({
   const canSave = title.trim().length > 0 && title.trim() !== conversation.title.trim();
 
   useEffect(() => {
-    const timer = setTimeout(() => inputRef.current?.focus(), 140);
+    const timer = setTimeout(() => inputRef.current?.focus(), 180);
     return () => clearTimeout(timer);
   }, []);
 
@@ -357,9 +369,9 @@ function RenameConversationSheet({
   }
 
   return (
-    <View style={[styles.actionLayer, { paddingBottom: bottomInset + 18 }]}> 
+    <ActionSurface bottomInset={bottomInset}>
       <Pressable style={styles.actionBackdrop} onPress={onClose} />
-      <View style={styles.actionSheet}>
+      <View style={styles.renameSheet}>
         <Text style={styles.actionTitle}>Rename conversation</Text>
         <TextInput
           ref={inputRef}
@@ -370,6 +382,7 @@ function RenameConversationSheet({
           returnKeyType="done"
           onSubmitEditing={save}
           selectionColor="#111113"
+          autoCorrect={false}
           style={styles.renameInput}
         />
         <View style={styles.renameActions}>
@@ -385,7 +398,7 @@ function RenameConversationSheet({
           </Pressable>
         </View>
       </View>
-    </View>
+    </ActionSurface>
   );
 }
 
@@ -410,7 +423,7 @@ function DeleteConversationSheet({
   }
 
   return (
-    <View style={[styles.actionLayer, { paddingBottom: bottomInset + 18 }]}> 
+    <ActionSurface bottomInset={bottomInset}>
       <Pressable style={styles.actionBackdrop} onPress={onClose} />
       <View style={styles.actionSheet}>
         <Text style={styles.actionTitle}>Delete conversation?</Text>
@@ -424,7 +437,7 @@ function DeleteConversationSheet({
           <Text style={styles.cancelText}>Cancel</Text>
         </Pressable>
       </View>
-    </View>
+    </ActionSurface>
   );
 }
 
@@ -654,6 +667,17 @@ const styles = StyleSheet.create({
     shadowRadius: 70,
     shadowOffset: { width: 0, height: 22 },
   },
+  renameSheet: {
+    overflow: 'hidden',
+    borderRadius: 28,
+    backgroundColor: '#fbfbfc',
+    padding: 8,
+    marginBottom: 10,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.18,
+    shadowRadius: 70,
+    shadowOffset: { width: 0, height: 22 },
+  },
   actionTitle: {
     paddingHorizontal: 16,
     paddingTop: 12,
@@ -706,7 +730,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.6,
   },
   renameInput: {
-    height: 54,
+    height: 58,
     marginHorizontal: 8,
     marginTop: 4,
     marginBottom: 10,
