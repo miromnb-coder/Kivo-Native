@@ -98,6 +98,35 @@ async function playFallbackTypewriter(answer: string, onDelta?: (delta: string) 
   }
 }
 
+function normalizeAnswerText(value: string) {
+  return value
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, ' ')
+    .replace(/\r\n/g, '\n')
+    .trim();
+}
+
+function extractAnswerFromRawResponse(raw: string, fallback: string) {
+  const clean = raw.trim();
+  if (!clean) return fallback;
+
+  try {
+    const parsed = JSON.parse(clean) as KivoChatFunctionResponse;
+    const answer = parsed.answer?.trim();
+    if (answer) return normalizeAnswerText(answer);
+  } catch {
+    // Not JSON. Use text as-is.
+  }
+
+  return normalizeAnswerText(clean);
+}
+
+async function playParsedResponseText(raw: string, fallback: string, onDelta?: (delta: string) => void) {
+  const answer = extractAnswerFromRawResponse(raw, fallback);
+  await playFallbackTypewriter(answer, onDelta);
+  return answer;
+}
+
 async function getFunctionHeaders() {
   const { data } = await supabase.auth.getSession();
   const accessToken = data.session?.access_token ?? supabasePublishableKey;
@@ -106,7 +135,7 @@ async function getFunctionHeaders() {
     apikey: supabasePublishableKey ?? '',
     Authorization: `Bearer ${accessToken ?? ''}`,
     'Content-Type': 'application/json',
-    Accept: 'text/plain',
+    Accept: 'text/plain, application/json',
   };
 }
 
@@ -168,7 +197,7 @@ export async function askKivoAi({ message, photo, history = [] }: KivoChatReques
       return buildFallbackAnswer(message, photo);
     }
 
-    return answer;
+    return normalizeAnswerText(answer);
   } catch (error) {
     console.warn('Failed to call kivo-chat function', error);
     return buildFallbackAnswer(message, photo);
@@ -181,6 +210,8 @@ export async function askKivoAiStream({ message, photo, history = [], onDelta }:
     await playFallbackTypewriter(answer, onDelta);
     return answer;
   }
+
+  const fallback = buildFallbackAnswer(message, photo);
 
   try {
     const memoryPayload = await buildMemoryPayload(message);
@@ -204,14 +235,22 @@ export async function askKivoAiStream({ message, photo, history = [], onDelta }:
       return answer;
     }
 
+    const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
+
+    if (contentType.includes('application/json')) {
+      const raw = await response.text();
+      const answer = await playParsedResponseText(raw, fallback, onDelta);
+      void savePossibleMemories(message);
+      return answer;
+    }
+
     const reader = response.body?.getReader?.();
 
     if (!reader) {
-      const answer = await response.text();
-      const cleanAnswer = answer.trim() || buildFallbackAnswer(message, photo);
-      await playFallbackTypewriter(cleanAnswer, onDelta);
+      const raw = await response.text();
+      const answer = await playParsedResponseText(raw, fallback, onDelta);
       void savePossibleMemories(message);
-      return cleanAnswer;
+      return answer;
     }
 
     const decoder = new TextDecoder();
@@ -234,10 +273,9 @@ export async function askKivoAiStream({ message, photo, history = [], onDelta }:
       onDelta?.(tail);
     }
 
-    const cleanAnswer = finalAnswer.trim();
+    const cleanAnswer = normalizeAnswerText(finalAnswer);
 
     if (!cleanAnswer) {
-      const fallback = buildFallbackAnswer(message, photo);
       await playFallbackTypewriter(fallback, onDelta);
       return fallback;
     }
