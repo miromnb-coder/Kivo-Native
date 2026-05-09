@@ -14,7 +14,7 @@
     "tunnel:8084": "expo start --tunnel --clear --port 8084",
     "tunnel:8085": "expo start --tunnel --clear --port 8085",
     "tunnel:8086": "expo start --tunnel --clear --port 8086",
-    "dev:stop": "pkill -f 'expo start' || true; pkill -f '@expo/ngrok' || true; pkill -f 'ngrok' || true",
+    "dev:stop": "node scripts/stop-expo.js",
     "phone": "npm run tunnel:8083",
     "phone:fallback": "npm run dev:stop && npm run tunnel:8084",
     "phone:fallback2": "npm run dev:stop && npm run tunnel:8085",
