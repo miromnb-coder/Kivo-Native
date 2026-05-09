@@ -15,6 +15,7 @@
     "phone": "npm run tunnel:8083",
     "install:safe": "npm i --legacy-peer-deps",
     "install:web": "npx expo install react-native-web react-dom @expo/metro-runtime",
+    "install:supabase": "npx expo install @supabase/supabase-js @react-native-async-storage/async-storage react-native-url-polyfill",
     "ios": "expo start --ios",
     "android": "expo start --android",
     "web": "expo start --web",
@@ -22,6 +23,8 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@react-native-async-storage/async-storage": "~2.2.0",
+    "@supabase/supabase-js": "^2.0.0",
     "expo": "~54.0.0",
     "expo-constants": "~18.0.0",
     "expo-linking": "~8.0.0",
@@ -34,7 +37,8 @@
     "react-native": "0.81.0",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-safe-area-context": "~5.6.0",
-    "react-native-screens": "~4.16.0"
+    "react-native-screens": "~4.16.0",
+    "react-native-url-polyfill": "^2.0.0"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
