@@ -52,6 +52,15 @@ function normalizeTitle(value: string) {
   return clean.length > 44 ? `${clean.slice(0, 44).trim()}...` : clean;
 }
 
+function conversationFromRow(row: KivoConversationRow, fallbackTitle = 'New conversation'): KivoConversationSummary {
+  return {
+    id: row.id,
+    title: row.title || fallbackTitle,
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
+  };
+}
+
 export function createConversationTitle(message: string, hasPhoto = false) {
   if (message.trim()) return normalizeTitle(message);
   return hasPhoto ? 'Image conversation' : 'New conversation';
@@ -167,6 +176,33 @@ async function saveLocalMessage(conversationId: string, message: KivoStoredMessa
   await writeLocalStore(store);
 }
 
+async function renameLocalConversation(conversationId: string, title: string) {
+  const store = await readLocalStore();
+  const timestamp = nowIso();
+  const normalizedTitle = normalizeTitle(title);
+  const existing = store.conversations.find((item) => item.id === conversationId);
+
+  if (!existing) return null;
+
+  const renamed: KivoConversationSummary = {
+    ...existing,
+    title: normalizedTitle,
+    updatedAt: timestamp,
+    isLocal: true,
+  };
+
+  store.conversations = [renamed, ...store.conversations.filter((item) => item.id !== conversationId)].slice(0, 50);
+  await writeLocalStore(store);
+  return renamed;
+}
+
+async function deleteLocalConversation(conversationId: string) {
+  const store = await readLocalStore();
+  store.conversations = store.conversations.filter((item) => item.id !== conversationId);
+  delete store.messagesByConversationId[conversationId];
+  await writeLocalStore(store);
+}
+
 export async function listKivoConversations(): Promise<KivoConversationSummary[]> {
   const userId = await getOrCreateKivoUserId();
 
@@ -184,12 +220,7 @@ export async function listKivoConversations(): Promise<KivoConversationSummary[]
     return listLocalConversations();
   }
 
-  return (data as KivoConversationRow[]).map((item) => ({
-    id: item.id,
-    title: item.title || 'New conversation',
-    createdAt: item.created_at ?? null,
-    updatedAt: item.updated_at ?? null,
-  }));
+  return (data as KivoConversationRow[]).map((item) => conversationFromRow(item));
 }
 
 export async function createKivoConversation(title: string): Promise<KivoConversationSummary> {
@@ -212,13 +243,69 @@ export async function createKivoConversation(title: string): Promise<KivoConvers
     return createLocalConversation(normalizedTitle);
   }
 
-  const row = data as KivoConversationRow;
-  return {
-    id: row.id,
-    title: row.title || normalizedTitle,
-    createdAt: row.created_at ?? null,
-    updatedAt: row.updated_at ?? null,
-  };
+  return conversationFromRow(data as KivoConversationRow, normalizedTitle);
+}
+
+export async function renameKivoConversation(conversationId: string, title: string): Promise<KivoConversationSummary | null> {
+  const normalizedTitle = normalizeTitle(title);
+
+  if (conversationId.startsWith(LOCAL_ID_PREFIX)) {
+    return renameLocalConversation(conversationId, normalizedTitle);
+  }
+
+  const userId = await getOrCreateKivoUserId();
+  if (!userId) return renameLocalConversation(conversationId, normalizedTitle);
+
+  const { data, error } = await supabase
+    .from('kivo_conversations')
+    .update({ title: normalizedTitle, updated_at: nowIso() })
+    .eq('id', conversationId)
+    .eq('user_id', userId)
+    .select('id,title,created_at,updated_at')
+    .single();
+
+  if (error || !data) {
+    console.warn('Failed to rename Supabase conversation', error);
+    return null;
+  }
+
+  return conversationFromRow(data as KivoConversationRow, normalizedTitle);
+}
+
+export async function deleteKivoConversation(conversationId: string) {
+  if (conversationId.startsWith(LOCAL_ID_PREFIX)) {
+    await deleteLocalConversation(conversationId);
+    return true;
+  }
+
+  const userId = await getOrCreateKivoUserId();
+  if (!userId) {
+    await deleteLocalConversation(conversationId);
+    return true;
+  }
+
+  const { error: messageError } = await supabase
+    .from('kivo_messages')
+    .delete()
+    .eq('conversation_id', conversationId);
+
+  if (messageError) {
+    console.warn('Failed to delete Supabase conversation messages', messageError);
+  }
+
+  const { error: conversationError } = await supabase
+    .from('kivo_conversations')
+    .delete()
+    .eq('id', conversationId)
+    .eq('user_id', userId);
+
+  if (conversationError) {
+    console.warn('Failed to delete Supabase conversation', conversationError);
+    return false;
+  }
+
+  await deleteLocalConversation(conversationId);
+  return true;
 }
 
 export async function loadKivoConversationMessages(conversationId: string): Promise<KivoStoredMessage[]> {
