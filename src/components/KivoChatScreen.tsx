@@ -33,17 +33,21 @@ export function KivoChatScreen() {
   const [messages, setMessages] = useState<string[]>([]);
   const [plusOpen, setPlusOpen] = useState(false);
   const [plusExpanded, setPlusExpanded] = useState(false);
+  const [composerActive, setComposerActive] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const appScale = useRef(new Animated.Value(1)).current;
   const appRadius = useRef(new Animated.Value(0)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const dashboardOpacity = useRef(new Animated.Value(1)).current;
+  const dashboardTranslateY = useRef(new Animated.Value(0)).current;
   const sidebarProgress = useRef(new Animated.Value(0)).current;
   const sidebarProgressRef = useRef(0);
   const dragStartProgressRef = useRef(0);
   const dragStartTimeRef = useRef(0);
   const dragModeRef = useRef<'idle' | 'horizontal' | 'vertical'>('idle');
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shouldShowTodayDashboard = messages.length === 0 && !composerActive && !plusOpen;
 
   const chatTranslateX = sidebarProgress.interpolate({
     inputRange: [0, 1],
@@ -92,6 +96,23 @@ export function KivoChatScreen() {
     ]).start();
   }, [appRadius, appScale, backdropOpacity, plusExpanded]);
 
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(dashboardOpacity, {
+        toValue: shouldShowTodayDashboard ? 1 : 0,
+        duration: shouldShowTodayDashboard ? 260 : 170,
+        easing: Easing.bezier(0.2, 0.82, 0.2, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(dashboardTranslateY, {
+        toValue: shouldShowTodayDashboard ? 0 : -16,
+        duration: shouldShowTodayDashboard ? 260 : 170,
+        easing: Easing.bezier(0.2, 0.82, 0.2, 1),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [dashboardOpacity, dashboardTranslateY, shouldShowTodayDashboard]);
+
   function animateSidebar(toValue: number) {
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
@@ -137,10 +158,12 @@ export function KivoChatScreen() {
 
   function handleSubmit(message: string) {
     setMessages((current) => [...current, message]);
+    setComposerActive(false);
   }
 
   function openPlusSheet() {
     Keyboard.dismiss();
+    setComposerActive(false);
     animateSidebar(0);
     setPlusOpen(true);
   }
@@ -152,6 +175,7 @@ export function KivoChatScreen() {
 
   function openSidebar() {
     Keyboard.dismiss();
+    setComposerActive(false);
     setPlusExpanded(false);
     setPlusOpen(false);
     animateSidebar(1);
@@ -163,6 +187,7 @@ export function KivoChatScreen() {
 
   function startNewChat() {
     setMessages([]);
+    setComposerActive(false);
     animateSidebar(0);
   }
 
@@ -251,7 +276,12 @@ export function KivoChatScreen() {
 
         <Pressable style={styles.contentDismissLayer} onPress={Keyboard.dismiss}>
           {messages.length === 0 ? (
-            <KivoTodayDashboard />
+            <Animated.View
+              pointerEvents={shouldShowTodayDashboard ? 'auto' : 'none'}
+              style={[styles.dashboardMotion, { opacity: dashboardOpacity, transform: [{ translateY: dashboardTranslateY }] }]}
+            >
+              <KivoTodayDashboard />
+            </Animated.View>
           ) : (
             <View style={[styles.chatPreview, { paddingTop: insets.top + 86 }]}>
               {messages.map((message, index) => (
@@ -266,7 +296,7 @@ export function KivoChatScreen() {
           )}
         </Pressable>
 
-        <KivoComposer onSubmit={handleSubmit} onOpenPlus={openPlusSheet} />
+        <KivoComposer onSubmit={handleSubmit} onOpenPlus={openPlusSheet} onComposingChange={setComposerActive} />
       </Animated.View>
 
       <KivoPlusSheet open={plusOpen} onClose={closePlusSheet} onExpandedChange={setPlusExpanded} />
@@ -301,6 +331,9 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   contentDismissLayer: {
+    flex: 1,
+  },
+  dashboardMotion: {
     flex: 1,
   },
   chatPreview: {
