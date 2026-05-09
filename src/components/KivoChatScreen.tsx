@@ -94,6 +94,7 @@ export function KivoChatScreen() {
   const [composerActive, setComposerActive] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const chatScrollRef = useRef<ScrollView>(null);
   const appScale = useRef(new Animated.Value(1)).current;
   const appRadius = useRef(new Animated.Value(0)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -106,6 +107,7 @@ export function KivoChatScreen() {
   const dragModeRef = useRef<'idle' | 'horizontal' | 'vertical'>('idle');
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const responseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
   const shouldShowTodayDashboard = messages.length === 0 && !composerActive && !plusOpen;
 
@@ -124,6 +126,15 @@ export function KivoChatScreen() {
     outputRange: [0, 22],
   });
 
+  function scrollChatToEnd(animated = true) {
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+
+    scrollTimerRef.current = setTimeout(() => {
+      chatScrollRef.current?.scrollToEnd({ animated });
+      scrollTimerRef.current = null;
+    }, 42);
+  }
+
   useEffect(() => {
     const listener = sidebarProgress.addListener(({ value }) => {
       sidebarProgressRef.current = value;
@@ -135,8 +146,15 @@ export function KivoChatScreen() {
   }, [sidebarProgress]);
 
   useEffect(() => {
+    if (messages.length > 0 || assistantThinking) {
+      scrollChatToEnd(true);
+    }
+  }, [assistantThinking, messages.length]);
+
+  useEffect(() => {
     return () => {
       if (responseTimerRef.current) clearTimeout(responseTimerRef.current);
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
       requestIdRef.current += 1;
     };
   }, []);
@@ -244,6 +262,7 @@ export function KivoChatScreen() {
     setSelectedPhoto(null);
     setComposerActive(false);
     setAssistantThinking(true);
+    scrollChatToEnd(true);
 
     const startedAt = Date.now();
     const answer = await askKivoAi({
@@ -266,6 +285,7 @@ export function KivoChatScreen() {
           text: answer,
         },
       ]);
+      scrollChatToEnd(true);
     }, delay);
   }
 
@@ -300,6 +320,7 @@ export function KivoChatScreen() {
 
   function startNewChat() {
     if (responseTimerRef.current) clearTimeout(responseTimerRef.current);
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
     requestIdRef.current += 1;
     setAssistantThinking(false);
     setMessages([]);
@@ -401,10 +422,13 @@ export function KivoChatScreen() {
             </Animated.View>
           ) : (
             <ScrollView
+              ref={chatScrollRef}
               style={styles.chatPreview}
               contentContainerStyle={[styles.chatPreviewContent, { paddingTop: insets.top + 86 }]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
+              onContentSizeChange={() => scrollChatToEnd(true)}
+              onLayout={() => scrollChatToEnd(false)}
             >
               {messages.map((message) => (
                 message.role === 'user' ? (
