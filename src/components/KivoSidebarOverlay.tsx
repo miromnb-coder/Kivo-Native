@@ -1,7 +1,9 @@
 import { Feather } from '@expo/vector-icons';
+import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Keyboard, KeyboardAvoidingView, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { deleteKivoConversation, renameKivoConversation } from '../lib/kivo-history';
 
 export type KivoNativeConversation = {
   id: string;
@@ -58,16 +60,21 @@ export function KivoSidebarOverlay({
   onGestureEnd,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const [sidebarConversations, setSidebarConversations] = useState<KivoNativeConversation[]>(conversations);
   const [actionConversation, setActionConversation] = useState<KivoNativeConversation | null>(null);
   const [renamingConversation, setRenamingConversation] = useState<KivoNativeConversation | null>(null);
   const [deleteConversation, setDeleteConversation] = useState<KivoNativeConversation | null>(null);
   const dragStartTimeRef = useRef(0);
   const dragModeRef = useRef<'idle' | 'horizontal' | 'vertical'>('idle');
-  const recentItems = conversations.slice(0, 18);
+  const recentItems = sidebarConversations.slice(0, 18);
   const translateX = progress.interpolate({
     inputRange: [0, 1],
     outputRange: [-drawerWidth - 34, 0],
   });
+
+  useEffect(() => {
+    setSidebarConversations(conversations);
+  }, [conversations]);
 
   function closeMenu() {
     setActionConversation(null);
@@ -89,6 +96,34 @@ export function KivoSidebarOverlay({
     setDeleteConversation(null);
     onOpenConversation?.(id);
     onClose();
+  }
+
+  async function handleRenameConversation(conversationId: string, title: string) {
+    const cleanTitle = title.trim();
+    if (!cleanTitle) return;
+
+    setSidebarConversations((current) => current.map((item) => (item.id === conversationId ? { ...item, title: cleanTitle } : item)));
+
+    if (onRenameConversation) {
+      await onRenameConversation(conversationId, cleanTitle);
+      return;
+    }
+
+    await renameKivoConversation(conversationId, cleanTitle);
+  }
+
+  async function handleDeleteConversation(conversationId: string) {
+    setSidebarConversations((current) => current.filter((item) => item.id !== conversationId));
+
+    if (onDeleteConversation) {
+      await onDeleteConversation(conversationId);
+    } else {
+      await deleteKivoConversation(conversationId);
+    }
+
+    if (conversationId === activeConversationId) {
+      onNewChat();
+    }
   }
 
   function openRename(conversation: KivoNativeConversation) {
@@ -246,7 +281,7 @@ export function KivoSidebarOverlay({
           bottomInset={insets.bottom}
           onClose={() => setRenamingConversation(null)}
           onSave={async (title) => {
-            await onRenameConversation?.(renamingConversation.id, title);
+            await handleRenameConversation(renamingConversation.id, title);
             setRenamingConversation(null);
           }}
         />
@@ -258,7 +293,7 @@ export function KivoSidebarOverlay({
           bottomInset={insets.bottom}
           onClose={() => setDeleteConversation(null)}
           onDelete={async () => {
-            await onDeleteConversation?.(deleteConversation.id);
+            await handleDeleteConversation(deleteConversation.id);
             setDeleteConversation(null);
           }}
         />
@@ -292,7 +327,7 @@ function RecentItem({ title, active = false, onPress, onLongPress }: RecentItemP
   );
 }
 
-function ActionSurface({ children, bottomInset }: { children: React.ReactNode; bottomInset: number }) {
+function ActionSurface({ children, bottomInset }: { children: ReactNode; bottomInset: number }) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
