@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Image, Keyboard, PanResponder, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
+import { askKivoAi } from '../lib/kivo-ai';
 import { KivoComposer } from './KivoComposer';
 import { KivoPlusSheet, type RecentPhoto } from './KivoPlusSheet';
 import { KivoSidebarOverlay } from './KivoSidebarOverlay';
@@ -30,18 +31,6 @@ const sampleConversations = [
 
 function clamp(value: number, min = 0, max = 1) {
   return Math.min(max, Math.max(min, value));
-}
-
-function createFirstKivoResponse(message: string, photo?: RecentPhoto | null) {
-  if (photo && message.trim()) {
-    return 'I received the image and your message. I can use this as context and help you refine, analyze, or turn it into the next action.';
-  }
-
-  if (photo) {
-    return 'Image received. Tell me what you want me to do with it, or send another instruction and I’ll continue from there.';
-  }
-
-  return 'Got it. I’m ready to help with the next step and keep the conversation moving from here.';
 }
 
 function KivoThinkingLine() {
@@ -117,6 +106,7 @@ export function KivoChatScreen() {
   const dragModeRef = useRef<'idle' | 'horizontal' | 'vertical'>('idle');
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const responseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestIdRef = useRef(0);
   const shouldShowTodayDashboard = messages.length === 0 && !composerActive && !plusOpen;
 
   const chatTranslateX = sidebarProgress.interpolate({
@@ -147,6 +137,7 @@ export function KivoChatScreen() {
   useEffect(() => {
     return () => {
       if (responseTimerRef.current) clearTimeout(responseTimerRef.current);
+      requestIdRef.current += 1;
     };
   }, []);
 
@@ -232,36 +223,50 @@ export function KivoChatScreen() {
     animateSidebar(open ? 1 : 0);
   }
 
-  function handleSubmit(message: string) {
+  async function handleSubmit(message: string) {
     const photoForMessage = selectedPhoto;
-    const response = createFirstKivoResponse(message, photoForMessage);
+    const userMessage: ChatMessage = {
+      id: `${Date.now()}-${messages.length}-user`,
+      role: 'user',
+      text: message,
+      photo: photoForMessage,
+    };
+    const historyForAi = [...messages, userMessage]
+      .filter((item) => item.text.trim().length > 0)
+      .slice(-10)
+      .map((item) => ({ role: item.role, content: item.text }));
+    const requestId = requestIdRef.current + 1;
 
+    requestIdRef.current = requestId;
     if (responseTimerRef.current) clearTimeout(responseTimerRef.current);
 
-    setMessages((current) => [
-      ...current,
-      {
-        id: `${Date.now()}-${current.length}-user`,
-        role: 'user',
-        text: message,
-        photo: photoForMessage,
-      },
-    ]);
+    setMessages((current) => [...current, userMessage]);
     setSelectedPhoto(null);
     setComposerActive(false);
     setAssistantThinking(true);
 
+    const startedAt = Date.now();
+    const answer = await askKivoAi({
+      message,
+      photo: photoForMessage,
+      history: historyForAi,
+    });
+    const elapsed = Date.now() - startedAt;
+    const delay = Math.max(0, 520 - elapsed);
+
     responseTimerRef.current = setTimeout(() => {
+      if (requestIdRef.current !== requestId) return;
+
       setAssistantThinking(false);
       setMessages((current) => [
         ...current,
         {
           id: `${Date.now()}-${current.length}-assistant`,
           role: 'assistant',
-          text: response,
+          text: answer,
         },
       ]);
-    }, 850);
+    }, delay);
   }
 
   function openPlusSheet() {
@@ -295,6 +300,7 @@ export function KivoChatScreen() {
 
   function startNewChat() {
     if (responseTimerRef.current) clearTimeout(responseTimerRef.current);
+    requestIdRef.current += 1;
     setAssistantThinking(false);
     setMessages([]);
     setSelectedPhoto(null);
