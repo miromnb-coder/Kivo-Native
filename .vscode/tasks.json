@@ -54,6 +54,57 @@
       }
     },
     {
+      "label": "3) Phone fallback 8084",
+      "type": "shell",
+      "command": "npm run phone:fallback",
+      "group": "test",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "4) Phone fallback 8085",
+      "type": "shell",
+      "command": "npm run phone:fallback2",
+      "group": "test",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "5) Phone fallback 8086",
+      "type": "shell",
+      "command": "npm run phone:fallback3",
+      "group": "test",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "Deploy Supabase kivo-chat",
+      "type": "shell",
+      "command": "npx supabase functions deploy kivo-chat",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
       "label": "Expo Tunnel 8081",
       "type": "shell",
       "command": "npm run tunnel:8081",
@@ -83,6 +134,45 @@
       "label": "Expo Tunnel 8083",
       "type": "shell",
       "command": "npm run tunnel:8083",
+      "group": "test",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "Expo Tunnel 8084",
+      "type": "shell",
+      "command": "npm run tunnel:8084",
+      "group": "test",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "Expo Tunnel 8085",
+      "type": "shell",
+      "command": "npm run tunnel:8085",
+      "group": "test",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "Expo Tunnel 8086",
+      "type": "shell",
+      "command": "npm run tunnel:8086",
       "group": "test",
       "isBackground": true,
       "problemMatcher": [],
