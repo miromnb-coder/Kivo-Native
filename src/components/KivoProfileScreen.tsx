@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 
 type Props = {
@@ -129,11 +129,11 @@ function ProfileCard({ rows }: { rows: ProfileRow[] }) {
           style={({ pressed }) => [styles.row, index < rows.length - 1 && styles.rowBorder, pressed && styles.pressed]}
         >
           <View style={styles.rowIconSlot}>
-            <Feather name={row.icon} size={24} color="#111216" strokeWidth={1.75} />
+            <Feather name={row.icon} size={22} color="#111216" strokeWidth={1.75} />
           </View>
           <Text numberOfLines={1} style={styles.rowLabel}>{row.label}</Text>
           {row.value ? <Text numberOfLines={1} style={styles.rowValue}>{row.value}</Text> : null}
-          <Feather name="chevron-right" size={23} color="#8f9097" strokeWidth={1.9} />
+          <Feather name="chevron-right" size={21} color="#8f9097" strokeWidth={1.9} />
         </Pressable>
       ))}
     </View>
@@ -141,7 +141,6 @@ function ProfileCard({ rows }: { rows: ProfileRow[] }) {
 }
 
 export function KivoProfileScreen({ onBack }: Props) {
-  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<KivoProfileData>(DEFAULT_PROFILE);
 
   useEffect(() => {
@@ -187,14 +186,10 @@ export function KivoProfileScreen({ onBack }: Props) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        bounces={false}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(34, insets.bottom + 24) }]}
-      >
+      <View style={styles.content}>
         <View style={styles.header}>
           <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
-            <Feather name="chevron-left" size={30} color="#111216" strokeWidth={1.85} />
+            <Feather name="chevron-left" size={28} color="#111216" strokeWidth={1.85} />
           </Pressable>
           <Text style={styles.title}>Profile</Text>
           <View style={styles.headerSpacer} />
@@ -222,7 +217,7 @@ export function KivoProfileScreen({ onBack }: Props) {
             <Text style={styles.secondaryButtonText}>Manage account</Text>
           </Pressable>
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -233,165 +228,167 @@ const styles = StyleSheet.create({
     zIndex: 180,
     backgroundColor: '#f5f5f6',
   },
-  scrollContent: {
+  content: {
+    flex: 1,
     paddingHorizontal: 18,
-    paddingTop: 8,
+    paddingTop: 0,
+    paddingBottom: 12,
   },
   header: {
-    height: 66,
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   backButton: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.72)',
   },
   title: {
     color: '#111216',
-    fontSize: 23,
+    fontSize: 24,
     fontWeight: '700',
-    letterSpacing: -0.7,
+    letterSpacing: -0.76,
   },
   headerSpacer: {
-    width: 58,
-    height: 58,
+    width: 48,
+    height: 48,
   },
   identityBlock: {
     alignItems: 'center',
-    paddingTop: 24,
-    paddingBottom: 28,
+    paddingTop: 12,
+    paddingBottom: 18,
   },
   avatar: {
-    width: 116,
-    height: 116,
-    borderRadius: 58,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#c9771b',
   },
   avatarText: {
     color: '#ffffff',
-    fontSize: 54,
+    fontSize: 46,
     fontWeight: '500',
-    letterSpacing: -1.8,
+    letterSpacing: -1.5,
   },
   name: {
-    marginTop: 24,
+    marginTop: 18,
     maxWidth: '88%',
     color: '#111216',
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '700',
-    letterSpacing: -1.12,
-    lineHeight: 36,
+    letterSpacing: -1,
+    lineHeight: 33,
     textAlign: 'center',
   },
   email: {
-    marginTop: 8,
+    marginTop: 4,
     maxWidth: '88%',
     color: '#878991',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '500',
-    letterSpacing: -0.45,
-    lineHeight: 25,
+    letterSpacing: -0.4,
+    lineHeight: 22,
     textAlign: 'center',
   },
   planPill: {
-    minHeight: 40,
-    marginTop: 20,
-    paddingHorizontal: 22,
-    borderRadius: 20,
+    minHeight: 34,
+    marginTop: 14,
+    paddingHorizontal: 20,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fbf3e8',
   },
   planText: {
     color: '#a56813',
-    fontSize: 17,
+    fontSize: 15.5,
     fontWeight: '700',
-    letterSpacing: -0.3,
+    letterSpacing: -0.26,
   },
   card: {
     overflow: 'hidden',
-    borderRadius: 26,
-    marginTop: 14,
+    borderRadius: 24,
+    marginTop: 10,
     backgroundColor: 'rgba(255,255,255,0.86)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.035)',
     shadowColor: '#0f172a',
-    shadowOpacity: 0.032,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.028,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 10 },
   },
   row: {
-    minHeight: 69,
+    minHeight: 46,
     flexDirection: 'row',
     alignItems: 'center',
     paddingLeft: 22,
     paddingRight: 20,
-    gap: 15,
+    gap: 14,
   },
   rowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(0,0,0,0.072)',
   },
   rowIconSlot: {
-    width: 35,
+    width: 33,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rowLabel: {
     flex: 1,
     color: '#111216',
-    fontSize: 18.5,
-    fontWeight: '500',
-    letterSpacing: -0.5,
-  },
-  rowValue: {
-    maxWidth: 178,
-    color: '#858790',
     fontSize: 17,
     fontWeight: '500',
-    letterSpacing: -0.35,
+    letterSpacing: -0.45,
+  },
+  rowValue: {
+    maxWidth: 152,
+    color: '#858790',
+    fontSize: 15.5,
+    fontWeight: '500',
+    letterSpacing: -0.3,
     textAlign: 'right',
   },
   buttons: {
-    gap: 12,
-    marginTop: 22,
+    gap: 10,
+    marginTop: 14,
   },
   primaryButton: {
-    height: 62,
-    borderRadius: 22,
+    height: 52,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#050507',
     shadowColor: '#0f172a',
     shadowOpacity: 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 10 },
   },
   primaryButtonText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    letterSpacing: -0.25,
+    letterSpacing: -0.24,
   },
   secondaryButton: {
-    height: 62,
-    borderRadius: 22,
+    height: 52,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(235,235,238,0.86)',
   },
   secondaryButtonText: {
     color: '#474a52',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    letterSpacing: -0.25,
+    letterSpacing: -0.24,
   },
   pressed: {
     opacity: 0.72,
