@@ -1,7 +1,18 @@
 import { Feather } from '@expo/vector-icons';
-import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Keyboard, KeyboardAvoidingView, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Animated,
+  Keyboard,
+  KeyboardAvoidingView,
+  PanResponder,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteKivoConversation, renameKivoConversation } from '../lib/kivo-history';
 
@@ -67,6 +78,7 @@ export function KivoSidebarOverlay({
   const dragStartTimeRef = useRef(0);
   const dragModeRef = useRef<'idle' | 'horizontal' | 'vertical'>('idle');
   const recentItems = sidebarConversations.slice(0, 18);
+
   const translateX = progress.interpolate({
     inputRange: [0, 1],
     outputRange: [-drawerWidth - 34, 0],
@@ -124,18 +136,6 @@ export function KivoSidebarOverlay({
     if (conversationId === activeConversationId) {
       onNewChat();
     }
-  }
-
-  function openRename(conversation: KivoNativeConversation) {
-    setActionConversation(null);
-    setDeleteConversation(null);
-    setRenamingConversation(conversation);
-  }
-
-  function openDelete(conversation: KivoNativeConversation) {
-    setActionConversation(null);
-    setRenamingConversation(null);
-    setDeleteConversation(conversation);
   }
 
   const panResponder = useMemo(
@@ -223,7 +223,23 @@ export function KivoSidebarOverlay({
 
             <View style={styles.divider} />
 
+            <View style={styles.projectsSection}>
+              <Text style={styles.sectionLabel}>Projects</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Create new project"
+                onPress={handleNewChat}
+                style={({ pressed }) => [styles.projectButton, pressed && styles.pressedRow]}
+              >
+                <Feather name="folder-plus" size={25} color="#191a1f" strokeWidth={1.85} />
+                <Text numberOfLines={1} style={styles.projectButtonText}>New project</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.dividerTight} />
+
             <View style={styles.recentList}>
+              <Text style={styles.sectionLabel}>Recent</Text>
               {recentItems.length > 0 ? (
                 recentItems.map((item) => (
                   <RecentItem
@@ -244,11 +260,8 @@ export function KivoSidebarOverlay({
           </ScrollView>
 
           <View style={[styles.footer, { paddingBottom: Math.max(22, insets.bottom + 22) }]}>
-            <Pressable style={({ pressed }) => [styles.profilePill, pressed && styles.pressed]}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>M</Text>
-              </View>
-              <Text numberOfLines={1} style={styles.profileName}>Miro</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Profile" style={({ pressed }) => [styles.avatarButton, pressed && styles.pressed]}>
+              <Text style={styles.avatarText}>M</Text>
             </Pressable>
 
             <Pressable
@@ -257,7 +270,7 @@ export function KivoSidebarOverlay({
               onPress={handleNewChat}
               style={({ pressed }) => [styles.composeButton, pressed && styles.composePressed]}
             >
-              <Feather name="edit-3" size={24} color="#111113" strokeWidth={1.85} />
+              <Feather name="edit-3" size={24} color="#ffffff" strokeWidth={1.85} />
             </Pressable>
           </View>
         </View>
@@ -270,8 +283,14 @@ export function KivoSidebarOverlay({
           conversation={actionConversation}
           bottomInset={insets.bottom}
           onClose={() => setActionConversation(null)}
-          onRename={() => openRename(actionConversation)}
-          onDelete={() => openDelete(actionConversation)}
+          onRename={() => {
+            setRenamingConversation(actionConversation);
+            setActionConversation(null);
+          }}
+          onDelete={() => {
+            setDeleteConversation(actionConversation);
+            setActionConversation(null);
+          }}
         />
       ) : null}
 
@@ -306,7 +325,7 @@ function MenuItem({ icon, label, active = false, onPress }: MenuItemProps) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.menuItem, active && styles.menuItemActive, pressed && styles.pressedRow]}>
       <View style={styles.menuIconWrap}>
-        <Feather name={icon} size={28} color="#222329" strokeWidth={1.75} />
+        <Feather name={icon} size={23} color="#222329" strokeWidth={1.75} />
       </View>
       <Text numberOfLines={1} style={styles.menuLabel}>{label}</Text>
     </Pressable>
@@ -322,12 +341,14 @@ function RecentItem({ title, active = false, onPress, onLongPress }: RecentItemP
       delayLongPress={440}
       style={({ pressed }) => [styles.recentItem, active && styles.recentItemActive, pressed && styles.pressedRow]}
     >
+      <Feather name="message-square" size={21} color="#222329" strokeWidth={1.75} />
       <Text numberOfLines={1} style={styles.recentText}>{title}</Text>
+      <Feather name="chevron-right" size={21} color="#8f9097" strokeWidth={1.9} />
     </Pressable>
   );
 }
 
-function ActionSurface({ children, bottomInset }: { children: ReactNode; bottomInset: number }) {
+function ActionSurface({ children, bottomInset }: { children: React.ReactNode; bottomInset: number }) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -520,77 +541,117 @@ const styles = StyleSheet.create({
     backgroundColor: SIDEBAR_BACKGROUND,
   },
   header: {
-    height: 58,
+    height: 70,
     justifyContent: 'flex-end',
-    paddingHorizontal: 36,
-    paddingBottom: 8,
+    paddingHorizontal: 29,
+    paddingBottom: 7,
   },
   logo: {
     color: '#111113',
-    fontSize: 30,
+    fontSize: 36,
     fontWeight: '600',
-    letterSpacing: -1.8,
-    lineHeight: 34,
+    letterSpacing: -2.15,
+    lineHeight: 42,
   },
   scrollContent: {
-    paddingHorizontal: 36,
-    paddingTop: 36,
-    paddingBottom: 36,
+    paddingHorizontal: 30,
+    paddingTop: 22,
+    paddingBottom: 38,
   },
   nav: {
-    gap: 20,
+    gap: 11,
   },
   menuItem: {
-    height: 58,
+    height: 42,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 20,
-    paddingHorizontal: 8,
+    paddingHorizontal: 0,
   },
   menuItemActive: {
     backgroundColor: 'transparent',
   },
   menuIconWrap: {
-    width: 28,
-    height: 28,
+    width: 27,
+    height: 27,
     alignItems: 'center',
     justifyContent: 'center',
   },
   menuLabel: {
     flex: 1,
     color: '#1b1c20',
-    fontSize: 19,
+    fontSize: 17,
     fontWeight: '500',
-    letterSpacing: -0.67,
+    letterSpacing: -0.53,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(0,0,0,0.072)',
-    marginTop: 36,
-    marginBottom: 30,
+    backgroundColor: 'rgba(0,0,0,0.07)',
+    marginTop: 28,
+    marginBottom: 22,
+  },
+  dividerTight: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0,0,0,0.07)',
+    marginTop: 22,
+    marginBottom: 24,
+  },
+  sectionLabel: {
+    color: '#6e7078',
+    fontSize: 15.5,
+    fontWeight: '600',
+    letterSpacing: -0.35,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  projectsSection: {
+    gap: 0,
+  },
+  projectButton: {
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.42)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 17,
+    paddingHorizontal: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.018)',
+  },
+  projectButtonText: {
+    flex: 1,
+    color: '#1b1c20',
+    fontSize: 17,
+    fontWeight: '500',
+    letterSpacing: -0.5,
   },
   recentList: {
-    gap: 3,
+    gap: 5,
   },
   recentItem: {
-    minHeight: 47,
-    borderRadius: 14,
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 10,
+    minHeight: 50,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 17,
+    paddingHorizontal: 0,
+    paddingVertical: 8,
   },
   recentItemActive: {
-    backgroundColor: 'rgba(255,255,255,0.62)',
+    backgroundColor: 'rgba(255,255,255,0.56)',
+    paddingHorizontal: 12,
+    marginHorizontal: -12,
   },
   recentText: {
+    flex: 1,
     color: '#2b2c31',
-    fontSize: 16,
+    fontSize: 16.2,
     fontWeight: '400',
-    letterSpacing: -0.43,
-    lineHeight: 19.5,
+    letterSpacing: -0.48,
+    lineHeight: 20,
   },
   emptyHistory: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 0,
     paddingVertical: 8,
     gap: 6,
   },
@@ -608,63 +669,42 @@ const styles = StyleSheet.create({
     letterSpacing: -0.28,
   },
   footer: {
-    paddingHorizontal: 36,
-    paddingTop: 11,
+    paddingHorizontal: 30,
+    paddingTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 16,
     backgroundColor: SIDEBAR_BACKGROUND,
   },
-  profilePill: {
-    width: 138,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255,255,255,0.82)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 11,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.018)',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.028,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 10 },
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  avatarButton: {
+    width: 43,
+    height: 43,
+    borderRadius: 21.5,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#c9771b',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.028,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
   },
   avatarText: {
     color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  profileName: {
-    flex: 1,
-    color: '#151518',
     fontSize: 17,
     fontWeight: '500',
-    letterSpacing: -0.68,
   },
   composeButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.82)',
+    width: 55,
+    height: 55,
+    borderRadius: 18,
+    backgroundColor: '#050507',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.018)',
     shadowColor: '#0f172a',
-    shadowOpacity: 0.028,
+    shadowOpacity: 0.14,
     shadowRadius: 24,
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 12 },
   },
   composePressed: {
     transform: [{ scale: 0.96 }],
