@@ -62,7 +62,7 @@ export function KivoMessageActionBar({ messageText, sources = [], onOpenSources 
               </View>
             ))}
           </View>
-          <Text style={styles.sourcesText}>Lähteet</Text>
+          <Text style={styles.sourcesText}>Sources</Text>
         </Pressable>
       ) : null}
     </View>
@@ -89,25 +89,17 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
     minHeight: 42,
     marginTop: 12,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.07)',
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    gap: 12,
+    paddingHorizontal: 0,
+    paddingVertical: 3,
   },
   leftActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
   },
   actionButton: {
     width: 31,
@@ -122,8 +114,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
-    paddingLeft: 3,
-    paddingRight: 10,
+    paddingLeft: 4,
+    paddingRight: 4,
   },
   sourceIcons: {
     flexDirection: 'row',
