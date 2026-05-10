@@ -49,7 +49,7 @@ export function KivoProfileSheet({ drawerWidth, bottomInset, onClose }: Props) {
 const styles = StyleSheet.create({
   layer: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, zIndex: 104 },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.01)' },
-  sheet: { position: 'absolute', left: 18, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.95)', paddingTop: 13, paddingHorizontal: 18, paddingBottom: 15, shadowColor: '#0f172a', shadowOpacity: 0.09, shadowRadius: 34, shadowOffset: { width: 0, height: 16 } },
+  sheet: { position: 'absolute', left: 18, borderRadius: 30, backgroundColor: '#ffffff', paddingTop: 13, paddingHorizontal: 18, paddingBottom: 15, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.045)', shadowColor: '#0f172a', shadowOpacity: 0.11, shadowRadius: 34, shadowOffset: { width: 0, height: 16 } },
   handle: { alignSelf: 'center', width: 48, height: 4, borderRadius: 999, backgroundColor: '#d8d9de', marginBottom: 16 },
   headerRow: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 14 },
   avatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#c9771b' },
