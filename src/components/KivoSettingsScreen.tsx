@@ -227,7 +227,8 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 18,
     paddingTop: 0,
-    paddingBottom: 2,
+    paddingBottom: 12,
+    transform: [{ translateY: -8 }],
   },
   header: {
     height: 64,
