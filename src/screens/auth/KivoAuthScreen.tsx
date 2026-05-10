@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export type KivoAuthMethod = 'apple' | 'google' | 'email' | 'signin';
+export type KivoAuthMethod = 'apple' | 'google' | 'email' | 'signin' | 'skip';
 
 type KivoAuthScreenProps = {
   loading?: boolean;
@@ -220,9 +220,19 @@ export function KivoAuthScreen({ loading = false, onContinue }: KivoAuthScreenPr
         <View pointerEvents="none" style={styles.topGlow} />
         <View pointerEvents="none" style={styles.bottomGlow} />
 
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Skip sign in"
+          disabled={loading}
+          onPress={() => onContinue('skip')}
+          style={({ pressed }) => [styles.topSkipButton, pressed && !loading ? styles.softPressed : null]}
+        >
+          <Text style={styles.topSkipText}>Skip</Text>
+        </Pressable>
+
         <View style={[styles.hero, { top: heroTop }]}>
           <Text style={styles.wordmark}>Kivo</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={styles.tagline}>Your personal AI operator.</Text>
+          <Text style={styles.tagline}>Your personal AI operator.</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={styles.description}>Plan your day, track what matters,</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.description, styles.descriptionSecond]}>and let Kivo help before you ask.</Text>
         </View>
@@ -325,6 +335,7 @@ const styles = StyleSheet.create({
   },
   tagline: {
     marginTop: 10,
+    width: '100%',
     color: '#4a4c53',
     fontSize: 22.5,
     fontWeight: '400',
@@ -403,6 +414,22 @@ const styles = StyleSheet.create({
   googleLogo: {
     width: 29,
     height: 29,
+  },
+  topSkipButton: {
+    position: 'absolute',
+    top: 15,
+    left: 22,
+    zIndex: 3,
+    minHeight: 44,
+    minWidth: 64,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  topSkipText: {
+    color: '#4d5058',
+    fontSize: 18,
+    fontWeight: '500',
+    letterSpacing: -0.38,
   },
   topBackButton: {
     position: 'absolute',
