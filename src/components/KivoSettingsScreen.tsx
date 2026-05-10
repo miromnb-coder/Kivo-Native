@@ -4,6 +4,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { notifyKivoSignedOut } from '../lib/kivo-auth-events';
 import { supabase } from '../lib/supabase';
+import { KivoConnectedAppsScreen } from './KivoConnectedAppsScreen';
 import { KivoCreditsPlanScreen } from './KivoCreditsPlanScreen';
 
 type Props = {
@@ -121,6 +122,7 @@ function SettingsCard({ title, rows, onRowPress }: { title: string; rows: Settin
 export function KivoSettingsScreen({ onBack }: Props) {
   const [identity, setIdentity] = useState<SettingsIdentity>(DEFAULT_IDENTITY);
   const [creditsPlanOpen, setCreditsPlanOpen] = useState(false);
+  const [connectedAppsOpen, setConnectedAppsOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -170,6 +172,11 @@ export function KivoSettingsScreen({ onBack }: Props) {
   function handleSettingsRowPress(label: string) {
     if (label === 'Credits & plan') {
       setCreditsPlanOpen(true);
+      return;
+    }
+
+    if (label === 'Connected apps') {
+      setConnectedAppsOpen(true);
     }
   }
 
@@ -203,7 +210,7 @@ export function KivoSettingsScreen({ onBack }: Props) {
         </View>
 
         <SettingsCard title="GENERAL" rows={generalRows} />
-        <SettingsCard title="PRIVACY & DATA" rows={privacyRows} />
+        <SettingsCard title="PRIVACY & DATA" rows={privacyRows} onRowPress={handleSettingsRowPress} />
         <SettingsCard title="APP & USAGE" rows={usageRows} onRowPress={handleSettingsRowPress} />
 
         <View style={styles.actions}>
@@ -223,6 +230,7 @@ export function KivoSettingsScreen({ onBack }: Props) {
         </View>
       </View>
       {creditsPlanOpen ? <KivoCreditsPlanScreen onBack={() => setCreditsPlanOpen(false)} /> : null}
+      {connectedAppsOpen ? <KivoConnectedAppsScreen onBack={() => setConnectedAppsOpen(false)} /> : null}
     </SafeAreaView>
   );
 }
