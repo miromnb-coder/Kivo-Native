@@ -4,6 +4,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { notifyKivoSignedOut } from '../lib/kivo-auth-events';
 import { supabase } from '../lib/supabase';
+import { KivoCreditsPlanScreen } from './KivoCreditsPlanScreen';
 
 type Props = {
   onBack: () => void;
@@ -93,7 +94,7 @@ function getIdentityFromUser(user: Awaited<ReturnType<typeof supabase.auth.getUs
   };
 }
 
-function SettingsCard({ title, rows }: { title: string; rows: SettingsRow[] }) {
+function SettingsCard({ title, rows, onRowPress }: { title: string; rows: SettingsRow[]; onRowPress?: (label: string) => void }) {
   return (
     <View style={styles.card}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -102,6 +103,7 @@ function SettingsCard({ title, rows }: { title: string; rows: SettingsRow[] }) {
           key={row.label}
           accessibilityRole="button"
           accessibilityLabel={row.label}
+          onPress={() => onRowPress?.(row.label)}
           style={({ pressed }) => [styles.row, index < rows.length - 1 && styles.rowBorder, pressed && styles.pressed]}
         >
           <View style={styles.iconSlot}>
@@ -118,6 +120,7 @@ function SettingsCard({ title, rows }: { title: string; rows: SettingsRow[] }) {
 
 export function KivoSettingsScreen({ onBack }: Props) {
   const [identity, setIdentity] = useState<SettingsIdentity>(DEFAULT_IDENTITY);
+  const [creditsPlanOpen, setCreditsPlanOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -164,6 +167,12 @@ export function KivoSettingsScreen({ onBack }: Props) {
     ]);
   }
 
+  function handleSettingsRowPress(label: string) {
+    if (label === 'Credits & plan') {
+      setCreditsPlanOpen(true);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.content}>
@@ -195,7 +204,7 @@ export function KivoSettingsScreen({ onBack }: Props) {
 
         <SettingsCard title="GENERAL" rows={generalRows} />
         <SettingsCard title="PRIVACY & DATA" rows={privacyRows} />
-        <SettingsCard title="APP & USAGE" rows={usageRows} />
+        <SettingsCard title="APP & USAGE" rows={usageRows} onRowPress={handleSettingsRowPress} />
 
         <View style={styles.actions}>
           <Pressable accessibilityRole="button" accessibilityLabel="Save changes" style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryPressed]}>
@@ -213,6 +222,7 @@ export function KivoSettingsScreen({ onBack }: Props) {
           </Text>
         </View>
       </View>
+      {creditsPlanOpen ? <KivoCreditsPlanScreen onBack={() => setCreditsPlanOpen(false)} /> : null}
     </SafeAreaView>
   );
 }
