@@ -1,5 +1,5 @@
 import { Feather, FontAwesome } from '@expo/vector-icons';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export type KivoAuthMethod = 'apple' | 'google' | 'email' | 'signin';
@@ -23,10 +23,11 @@ type AuthButtonProps = {
   loading?: boolean;
   secondary?: boolean;
   icon: 'apple' | 'google' | 'email';
+  height: number;
   onPress: (method: KivoAuthMethod) => void;
 };
 
-function AuthButton({ label, method, loading, secondary, icon, onPress }: AuthButtonProps) {
+function AuthButton({ label, method, loading, secondary, icon, height, onPress }: AuthButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -35,41 +36,58 @@ function AuthButton({ label, method, loading, secondary, icon, onPress }: AuthBu
       onPress={() => onPress(method)}
       style={({ pressed }) => [
         styles.authButton,
+        { height },
         secondary && styles.authButtonSecondary,
         pressed && !loading ? styles.authButtonPressed : null,
         loading ? styles.authButtonDisabled : null,
       ]}
     >
       <View style={styles.buttonIconSlot}>
-        {icon === 'apple' ? <FontAwesome name="apple" size={31} color="#030406" /> : null}
+        {icon === 'apple' ? <FontAwesome name="apple" size={29} color="#030406" /> : null}
         {icon === 'google' ? <GoogleMark /> : null}
-        {icon === 'email' ? <Feather name="mail" size={31} color="#111216" strokeWidth={1.85} /> : null}
+        {icon === 'email' ? <Feather name="mail" size={29} color="#111216" strokeWidth={1.85} /> : null}
       </View>
 
-      <Text style={[styles.authButtonText, secondary && styles.authButtonTextSecondary]}>{label}</Text>
+      <Text numberOfLines={1} style={[styles.authButtonText, secondary && styles.authButtonTextSecondary]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
 export function KivoAuthScreen({ loading = false, onContinue }: KivoAuthScreenProps) {
+  const { height, width } = useWindowDimensions();
+  const isCompact = height < 780;
+  const heroTop = Math.max(176, Math.min(226, height * 0.265));
+  const buttonHeight = isCompact ? 58 : 64;
+  const buttonGap = isCompact ? 13 : 16;
+  const authBottom = isCompact ? 16 : 23;
+  const sidePadding = width < 370 ? 24 : 32;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.screen}>
         <View pointerEvents="none" style={styles.topGlow} />
         <View pointerEvents="none" style={styles.bottomGlow} />
 
-        <View style={styles.hero}>
+        <View style={[styles.hero, { top: heroTop }]}>
           <Text style={styles.wordmark}>Kivo</Text>
-          <Text style={styles.tagline}>Your personal AI operator.</Text>
-          <Text style={styles.description}>Plan your day, track what matters,</Text>
-          <Text style={[styles.description, styles.descriptionSecond]}>and let Kivo help before you ask.</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={styles.tagline}>
+            Your personal AI operator.
+          </Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={styles.description}>
+            Plan your day, track what matters,
+          </Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.description, styles.descriptionSecond]}>
+            and let Kivo help before you ask.
+          </Text>
         </View>
 
-        <View style={styles.authArea}>
-          <View style={styles.buttons}>
-            <AuthButton label="Continue with Apple" method="apple" icon="apple" loading={loading} onPress={onContinue} />
-            <AuthButton label="Continue with Google" method="google" icon="google" loading={loading} onPress={onContinue} />
-            <AuthButton label="Continue with email" method="email" icon="email" secondary loading={loading} onPress={onContinue} />
+        <View style={[styles.authArea, { bottom: authBottom, paddingHorizontal: sidePadding }]}>
+          <View style={[styles.buttons, { gap: buttonGap }]}>
+            <AuthButton label="Continue with Apple" method="apple" icon="apple" height={buttonHeight} loading={loading} onPress={onContinue} />
+            <AuthButton label="Continue with Google" method="google" icon="google" height={buttonHeight} loading={loading} onPress={onContinue} />
+            <AuthButton label="Continue with email" method="email" icon="email" height={buttonHeight} secondary loading={loading} onPress={onContinue} />
           </View>
 
           <Pressable
@@ -79,16 +97,18 @@ export function KivoAuthScreen({ loading = false, onContinue }: KivoAuthScreenPr
             onPress={() => onContinue('signin')}
             style={({ pressed }) => [styles.signInRow, pressed && !loading ? styles.softPressed : null]}
           >
-            <Text style={styles.signInMuted}>Already have an account?</Text>
-            <Text style={styles.signInLink}>Sign in</Text>
+            <Text numberOfLines={1} style={styles.signInMuted}>Already have an account?</Text>
+            <Text numberOfLines={1} style={styles.signInLink}>Sign in</Text>
           </Pressable>
 
           <View style={styles.trustLine}>
-            <Feather name="lock" size={14} color="#8e9098" strokeWidth={1.65} />
-            <Text style={styles.trustText}>Private by design. You control your data.</Text>
+            <Feather name="lock" size={13.5} color="#8e9098" strokeWidth={1.65} />
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={styles.trustText}>
+              Private by design. You control your data.
+            </Text>
           </View>
 
-          <Text style={styles.legalText}>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78} style={styles.legalText}>
             By continuing, you agree to <Text style={styles.legalLink}>Terms</Text> and <Text style={styles.legalLink}>Privacy</Text>.
           </Text>
 
@@ -115,71 +135,69 @@ const styles = StyleSheet.create({
   },
   topGlow: {
     position: 'absolute',
-    top: 56,
-    left: '12%',
-    right: '12%',
+    top: 86,
+    left: '8%',
+    right: '8%',
     height: 230,
-    borderRadius: 180,
-    backgroundColor: 'rgba(255,255,255,0.54)',
-    opacity: 0.82,
-    transform: [{ scaleX: 1.22 }],
+    borderRadius: 190,
+    backgroundColor: 'rgba(255,255,255,0.34)',
+    opacity: 0.38,
+    transform: [{ scaleX: 1.18 }],
   },
   bottomGlow: {
     position: 'absolute',
-    left: '-16%',
-    right: '-16%',
-    bottom: -82,
-    height: 310,
-    borderRadius: 240,
-    backgroundColor: 'rgba(255,255,255,0.58)',
+    left: '-18%',
+    right: '-18%',
+    bottom: -104,
+    height: 286,
+    borderRadius: 230,
+    backgroundColor: 'rgba(255,255,255,0.26)',
   },
   hero: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
     alignItems: 'center',
     paddingHorizontal: 28,
-    paddingTop: 286,
   },
   wordmark: {
     color: '#0d1117',
     fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' }),
-    fontSize: 78,
+    fontSize: 76,
     fontWeight: '700',
-    letterSpacing: -5.8,
-    lineHeight: 88,
+    letterSpacing: -5.6,
+    lineHeight: 84,
     includeFontPadding: false,
     textAlign: 'center',
   },
   tagline: {
     marginTop: 10,
     color: '#4a4c53',
-    fontSize: 24,
+    fontSize: 22.5,
     fontWeight: '400',
-    letterSpacing: -0.74,
-    lineHeight: 31,
+    letterSpacing: -0.72,
+    lineHeight: 29,
     textAlign: 'center',
   },
   description: {
     marginTop: 27,
     color: '#51535a',
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '400',
-    letterSpacing: -0.5,
-    lineHeight: 28,
+    letterSpacing: -0.48,
+    lineHeight: 27,
     textAlign: 'center',
   },
   descriptionSecond: {
     marginTop: 0,
   },
   authArea: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    paddingHorizontal: 32,
-    paddingBottom: 23,
+    position: 'absolute',
+    left: 0,
+    right: 0,
   },
-  buttons: {
-    gap: 16,
-  },
+  buttons: {},
   authButton: {
-    height: 64,
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.055)',
@@ -214,30 +232,30 @@ const styles = StyleSheet.create({
   authButtonText: {
     flex: 1,
     color: '#111216',
-    fontSize: 21.5,
+    fontSize: 20.5,
     fontWeight: '600',
-    letterSpacing: -0.62,
-    lineHeight: 27,
+    letterSpacing: -0.6,
+    lineHeight: 26,
   },
   authButtonTextSecondary: {
     fontWeight: '500',
   },
   googleMark: {
-    width: 32,
-    height: 32,
+    width: 31,
+    height: 31,
     alignItems: 'center',
     justifyContent: 'center',
   },
   googleLetter: {
     color: '#4285f4',
-    fontSize: 33,
+    fontSize: 32,
     fontWeight: '700',
     letterSpacing: -2,
-    lineHeight: 36,
+    lineHeight: 35,
   },
   signInRow: {
-    marginTop: 40,
-    minHeight: 34,
+    marginTop: 38,
+    minHeight: 33,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -245,13 +263,13 @@ const styles = StyleSheet.create({
   },
   signInMuted: {
     color: '#696b72',
-    fontSize: 18.5,
+    fontSize: 18,
     fontWeight: '400',
     letterSpacing: -0.45,
   },
   signInLink: {
     color: '#111216',
-    fontSize: 19,
+    fontSize: 18.5,
     fontWeight: '700',
     letterSpacing: -0.48,
   },
@@ -259,7 +277,7 @@ const styles = StyleSheet.create({
     opacity: 0.68,
   },
   trustLine: {
-    marginTop: 22,
+    marginTop: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -267,17 +285,17 @@ const styles = StyleSheet.create({
   },
   trustText: {
     color: '#747780',
-    fontSize: 14.5,
+    fontSize: 13.8,
     fontWeight: '400',
     letterSpacing: -0.28,
   },
   legalText: {
-    marginTop: 29,
+    marginTop: 27,
     color: '#6f7179',
-    fontSize: 15.5,
+    fontSize: 13.6,
     fontWeight: '400',
-    letterSpacing: -0.26,
-    lineHeight: 20,
+    letterSpacing: -0.24,
+    lineHeight: 18,
     textAlign: 'center',
   },
   legalLink: {
