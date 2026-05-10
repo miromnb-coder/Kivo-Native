@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteKivoConversation, renameKivoConversation } from '../lib/kivo-history';
-import { KivoAccountSheet } from './KivoAccountSheet';
+import { KivoProfileSheet } from './KivoProfileSheet';
 
 export type KivoNativeConversation = {
   id: string;
@@ -288,7 +288,7 @@ export function KivoSidebarOverlay({
         <View pointerEvents="box-only" style={styles.drawerGestureEdge} {...panResponder.panHandlers} />
       </Animated.View>
 
-      <KivoAccountSheet visible={accountSheetOpen} onClose={() => setAccountSheetOpen(false)} />
+      {accountSheetOpen ? <KivoProfileSheet drawerWidth={drawerWidth} bottomInset={insets.bottom} onClose={() => setAccountSheetOpen(false)} /> : null}
 
       {actionConversation ? (
         <ConversationActionSheet
