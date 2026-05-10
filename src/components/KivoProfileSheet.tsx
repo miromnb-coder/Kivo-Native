@@ -1,5 +1,7 @@
 import { Feather } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { notifyKivoSignedOut } from '../lib/kivo-auth-events';
+import { supabase } from '../lib/supabase';
 
 type Props = {
   drawerWidth: number;
@@ -18,23 +20,46 @@ const rows: Array<{ icon: keyof typeof Feather.glyphMap; label: string }> = [
 ];
 
 export function KivoProfileSheet({ drawerWidth, bottomInset, onClose }: Props) {
+  async function completeSignOut() {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.warn('Failed to sign out from Supabase', error);
+    } finally {
+      onClose();
+      notifyKivoSignedOut();
+    }
+  }
+
+  function handleSignOutPress() {
+    Alert.alert('Sign out', 'Do you want to sign out of Kivo?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', onPress: completeSignOut },
+    ]);
+  }
+
   return (
     <View pointerEvents="box-none" style={styles.layer}>
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={[styles.sheet, { width: Math.max(292, drawerWidth - 48), bottom: Math.max(16, bottomInset + 12) }]}>
         <View style={styles.handle} />
-        <View style={styles.headerRow}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Open profile" style={({ pressed }) => [styles.headerRow, pressed && styles.pressed]}>
           <View style={styles.avatar}><Text style={styles.avatarText}>M</Text></View>
           <View style={styles.identity}>
             <Text style={styles.name}>Miro</Text>
             <Text style={styles.plan}>Free plan</Text>
           </View>
           <View style={styles.upgrade}><Text style={styles.upgradeText}>Upgrade to Plus</Text></View>
-        </View>
+        </Pressable>
         {rows.map((row, index) => (
           <View key={row.label}>
             {index === 3 || index === 6 ? <View style={styles.divider} /> : null}
-            <Pressable style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={row.label}
+              onPress={row.label === 'Sign out' ? handleSignOutPress : undefined}
+              style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+            >
               <Feather name={row.icon} size={20} color="#15161a" strokeWidth={1.75} />
               <Text style={styles.rowText}>{row.label}</Text>
               <Feather name="chevron-right" size={19} color="#8f9097" strokeWidth={1.85} />
