@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, StyleSheet, View } from 'react-native';
-import * as ExpoLinking from 'expo-linking';
 import { KivoChatScreenStreaming } from '@/components/KivoChatScreenStreaming';
 import { getKivoSession, supabase } from '@/lib/supabase';
 import { KivoAuthScreen, type KivoAuthMethod } from '@/screens/auth/KivoAuthScreen';
 
-const OAUTH_REDIRECT_TO = ExpoLinking.createURL('/');
-const MAGIC_LINK_REDIRECT_TO = ExpoLinking.createURL('/');
+const KIVO_NATIVE_AUTH_REDIRECT_TO = 'kivonative://auth/callback';
 
 function getAuthCodeFromUrl(url: string) {
   try {
@@ -73,7 +71,7 @@ export default function Index() {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: OAUTH_REDIRECT_TO,
+        redirectTo: KIVO_NATIVE_AUTH_REDIRECT_TO,
         skipBrowserRedirect: true,
       },
     });
@@ -103,7 +101,7 @@ export default function Index() {
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
       options: {
-        emailRedirectTo: MAGIC_LINK_REDIRECT_TO,
+        emailRedirectTo: KIVO_NATIVE_AUTH_REDIRECT_TO,
       },
     });
 
