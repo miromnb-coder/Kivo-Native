@@ -8,6 +8,7 @@ type Props = {
   drawerWidth: number;
   bottomInset: number;
   onClose: () => void;
+  onOpenProfile?: () => void;
 };
 
 type KivoProfileIdentity = {
@@ -66,7 +67,7 @@ function getIdentityFromUser(user: Awaited<ReturnType<typeof supabase.auth.getUs
   };
 }
 
-export function KivoProfileSheet({ drawerWidth, bottomInset, onClose }: Props) {
+export function KivoProfileSheet({ drawerWidth, bottomInset, onClose, onOpenProfile }: Props) {
   const [identity, setIdentity] = useState<KivoProfileIdentity>({ name: 'Kivo User', initial: 'K' });
 
   useEffect(() => {
@@ -114,12 +115,23 @@ export function KivoProfileSheet({ drawerWidth, bottomInset, onClose }: Props) {
     ]);
   }
 
+  function handleRowPress(label: string) {
+    if (label === 'Sign out') {
+      handleSignOutPress();
+      return;
+    }
+
+    if (label === 'Profile') {
+      onOpenProfile?.();
+    }
+  }
+
   return (
     <View pointerEvents="box-none" style={styles.layer}>
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={[styles.sheet, { width: Math.max(292, drawerWidth - 48), bottom: Math.max(16, bottomInset + 12) }]}>
         <View style={styles.handle} />
-        <Pressable accessibilityRole="button" accessibilityLabel="Open profile" style={({ pressed }) => [styles.headerRow, pressed && styles.pressed]}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Open profile" onPress={onOpenProfile} style={({ pressed }) => [styles.headerRow, pressed && styles.pressed]}>
           <View style={styles.avatar}><Text style={styles.avatarText}>{identity.initial}</Text></View>
           <View style={styles.identity}>
             <Text numberOfLines={1} style={styles.name}>{identity.name}</Text>
@@ -133,7 +145,7 @@ export function KivoProfileSheet({ drawerWidth, bottomInset, onClose }: Props) {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={row.label}
-              onPress={row.label === 'Sign out' ? handleSignOutPress : undefined}
+              onPress={() => handleRowPress(row.label)}
               style={({ pressed }) => [styles.row, pressed && styles.pressed]}
             >
               <Feather name={row.icon} size={20} color="#15161a" strokeWidth={1.75} />
