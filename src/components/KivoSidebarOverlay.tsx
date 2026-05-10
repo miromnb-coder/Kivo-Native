@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteKivoConversation, renameKivoConversation } from '../lib/kivo-history';
 import { supabase } from '../lib/supabase';
+import { KivoProfileScreen } from './KivoProfileScreen';
 import { KivoProfileSheet } from './KivoProfileSheet';
 
 export type KivoNativeConversation = {
@@ -124,6 +125,7 @@ export function KivoSidebarOverlay({
   const [renamingConversation, setRenamingConversation] = useState<KivoNativeConversation | null>(null);
   const [deleteConversation, setDeleteConversation] = useState<KivoNativeConversation | null>(null);
   const [accountSheetOpen, setAccountSheetOpen] = useState(false);
+  const [profileScreenOpen, setProfileScreenOpen] = useState(false);
   const [identity, setIdentity] = useState<SidebarIdentity>({ name: 'Kivo User', initial: 'K' });
   const dragStartTimeRef = useRef(0);
   const dragModeRef = useRef<'idle' | 'horizontal' | 'vertical'>('idle');
@@ -170,6 +172,7 @@ export function KivoSidebarOverlay({
     setRenamingConversation(null);
     setDeleteConversation(null);
     setAccountSheetOpen(false);
+    setProfileScreenOpen(false);
     onClose();
   }
 
@@ -178,6 +181,7 @@ export function KivoSidebarOverlay({
     setRenamingConversation(null);
     setDeleteConversation(null);
     setAccountSheetOpen(false);
+    setProfileScreenOpen(false);
     onNewChat();
   }
 
@@ -186,8 +190,17 @@ export function KivoSidebarOverlay({
     setRenamingConversation(null);
     setDeleteConversation(null);
     setAccountSheetOpen(false);
+    setProfileScreenOpen(false);
     onOpenConversation?.(id);
     onClose();
+  }
+
+  function handleOpenProfileScreen() {
+    setActionConversation(null);
+    setRenamingConversation(null);
+    setDeleteConversation(null);
+    setAccountSheetOpen(false);
+    setProfileScreenOpen(true);
   }
 
   async function handleRenameConversation(conversationId: string, title: string) {
@@ -363,7 +376,16 @@ export function KivoSidebarOverlay({
         <View pointerEvents="box-only" style={styles.drawerGestureEdge} {...panResponder.panHandlers} />
       </Animated.View>
 
-      {accountSheetOpen ? <KivoProfileSheet drawerWidth={drawerWidth} bottomInset={insets.bottom} onClose={() => setAccountSheetOpen(false)} /> : null}
+      {accountSheetOpen ? (
+        <KivoProfileSheet
+          drawerWidth={drawerWidth}
+          bottomInset={insets.bottom}
+          onClose={() => setAccountSheetOpen(false)}
+          onOpenProfile={handleOpenProfileScreen}
+        />
+      ) : null}
+
+      {profileScreenOpen ? <KivoProfileScreen onBack={() => setProfileScreenOpen(false)} /> : null}
 
       {actionConversation ? (
         <ConversationActionSheet
