@@ -6,6 +6,7 @@ import { notifyKivoSignedOut } from '../lib/kivo-auth-events';
 import { supabase } from '../lib/supabase';
 import { KivoConnectedAppsScreen } from './KivoConnectedAppsScreen';
 import { KivoCreditsPlanScreen } from './KivoCreditsPlanScreen';
+import { KivoMemoryScreen } from './KivoMemoryScreen';
 
 type Props = {
   onBack: () => void;
@@ -123,6 +124,7 @@ export function KivoSettingsScreen({ onBack }: Props) {
   const [identity, setIdentity] = useState<SettingsIdentity>(DEFAULT_IDENTITY);
   const [creditsPlanOpen, setCreditsPlanOpen] = useState(false);
   const [connectedAppsOpen, setConnectedAppsOpen] = useState(false);
+  const [memoryOpen, setMemoryOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -177,6 +179,11 @@ export function KivoSettingsScreen({ onBack }: Props) {
 
     if (label === 'Connected apps') {
       setConnectedAppsOpen(true);
+      return;
+    }
+
+    if (label === 'Memory') {
+      setMemoryOpen(true);
     }
   }
 
@@ -231,6 +238,7 @@ export function KivoSettingsScreen({ onBack }: Props) {
       </View>
       {creditsPlanOpen ? <KivoCreditsPlanScreen onBack={() => setCreditsPlanOpen(false)} /> : null}
       {connectedAppsOpen ? <KivoConnectedAppsScreen onBack={() => setConnectedAppsOpen(false)} /> : null}
+      {memoryOpen ? <KivoMemoryScreen onBack={() => setMemoryOpen(false)} /> : null}
     </SafeAreaView>
   );
 }
