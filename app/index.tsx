@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, StyleSheet, View } from 'react-native';
 import * as ExpoLinking from 'expo-linking';
 import { KivoChatScreenStreaming } from '@/components/KivoChatScreenStreaming';
+import { subscribeKivoSignOut } from '@/lib/kivo-auth-events';
 import { getKivoSession, supabase } from '@/lib/supabase';
 import { KivoAuthScreen, type KivoAuthMethod } from '@/screens/auth/KivoAuthScreen';
 
@@ -72,6 +73,10 @@ export default function Index() {
 
     loadSession();
 
+    const unsubscribeLocalSignOut = subscribeKivoSignOut(() => {
+      setIsSignedIn(false);
+    });
+
     const urlSubscription = Linking.addEventListener('url', ({ url }) => {
       handleIncomingAuthUrl(url).catch((error) => {
         console.warn('Failed to complete Kivo auth redirect', error);
@@ -84,6 +89,7 @@ export default function Index() {
 
     return () => {
       mounted = false;
+      unsubscribeLocalSignOut();
       urlSubscription.remove();
       data.subscription.unsubscribe();
     };
