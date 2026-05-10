@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { notifyKivoSignedOut } from '../lib/kivo-auth-events';
 import { supabase } from '../lib/supabase';
+import { KivoUpgradeScreen } from './KivoUpgradeScreen';
 
 type Props = {
   drawerWidth: number;
@@ -70,6 +71,7 @@ function getIdentityFromUser(user: Awaited<ReturnType<typeof supabase.auth.getUs
 
 export function KivoProfileSheet({ drawerWidth, bottomInset, onClose, onOpenProfile, onOpenUpgrade }: Props) {
   const [identity, setIdentity] = useState<KivoProfileIdentity>({ name: 'Kivo User', initial: 'K' });
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -116,6 +118,15 @@ export function KivoProfileSheet({ drawerWidth, bottomInset, onClose, onOpenProf
     ]);
   }
 
+  function handleUpgradePress() {
+    if (onOpenUpgrade) {
+      onOpenUpgrade();
+      return;
+    }
+
+    setUpgradeOpen(true);
+  }
+
   function handleRowPress(label: string) {
     if (label === 'Sign out') {
       handleSignOutPress();
@@ -138,7 +149,7 @@ export function KivoProfileSheet({ drawerWidth, bottomInset, onClose, onOpenProf
             <Text numberOfLines={1} style={styles.name}>{identity.name}</Text>
             <Text style={styles.plan}>Free plan</Text>
           </View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Upgrade to Plus" onPress={onOpenUpgrade} style={({ pressed }) => [styles.upgrade, pressed && styles.pressed]}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Upgrade to Plus" onPress={handleUpgradePress} style={({ pressed }) => [styles.upgrade, pressed && styles.pressed]}>
             <Text style={styles.upgradeText}>Upgrade to Plus</Text>
           </Pressable>
         </Pressable>
@@ -158,6 +169,8 @@ export function KivoProfileSheet({ drawerWidth, bottomInset, onClose, onOpenProf
           </View>
         ))}
       </View>
+
+      {upgradeOpen ? <KivoUpgradeScreen onBack={() => setUpgradeOpen(false)} /> : null}
     </View>
   );
 }
