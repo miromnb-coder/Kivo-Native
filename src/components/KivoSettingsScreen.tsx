@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { notifyKivoSignedOut } from '../lib/kivo-auth-events';
 import { supabase } from '../lib/supabase';
@@ -93,28 +93,23 @@ function getIdentityFromUser(user: Awaited<ReturnType<typeof supabase.auth.getUs
   };
 }
 
-function SettingsCard({ title, rows, compact }: { title: string; rows: SettingsRow[]; compact: boolean }) {
+function SettingsCard({ title, rows }: { title: string; rows: SettingsRow[] }) {
   return (
-    <View style={[styles.card, compact && styles.cardCompact]}>
-      <Text style={[styles.sectionTitle, compact && styles.sectionTitleCompact]}>{title}</Text>
+    <View style={styles.card}>
+      <Text style={styles.sectionTitle}>{title}</Text>
       {rows.map((row, index) => (
         <Pressable
           key={row.label}
           accessibilityRole="button"
           accessibilityLabel={row.label}
-          style={({ pressed }) => [
-            styles.row,
-            compact && styles.rowCompact,
-            index < rows.length - 1 && styles.rowBorder,
-            pressed && styles.pressed,
-          ]}
+          style={({ pressed }) => [styles.row, index < rows.length - 1 && styles.rowBorder, pressed && styles.pressed]}
         >
           <View style={styles.iconSlot}>
-            <Feather name={row.icon} size={compact ? 21 : 23} color="#111216" strokeWidth={1.75} />
+            <Feather name={row.icon} size={18} color="#111216" strokeWidth={1.75} />
           </View>
-          <Text numberOfLines={1} style={[styles.rowLabel, compact && styles.rowLabelCompact]}>{row.label}</Text>
-          {row.value ? <Text numberOfLines={1} style={[styles.rowValue, compact && styles.rowValueCompact]}>{row.value}</Text> : null}
-          <Feather name="chevron-right" size={compact ? 21 : 23} color="#8f9097" strokeWidth={1.9} />
+          <Text numberOfLines={1} style={styles.rowLabel}>{row.label}</Text>
+          {row.value ? <Text numberOfLines={1} style={styles.rowValue}>{row.value}</Text> : null}
+          <Feather name="chevron-right" size={18} color="#8f9097" strokeWidth={1.9} />
         </Pressable>
       ))}
     </View>
@@ -122,8 +117,6 @@ function SettingsCard({ title, rows, compact }: { title: string; rows: SettingsR
 }
 
 export function KivoSettingsScreen({ onBack }: Props) {
-  const { height } = useWindowDimensions();
-  const compact = height < 880;
   const [identity, setIdentity] = useState<SettingsIdentity>(DEFAULT_IDENTITY);
 
   useEffect(() => {
@@ -173,47 +166,51 @@ export function KivoSettingsScreen({ onBack }: Props) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.content, compact && styles.contentCompact]}>
-        <View style={[styles.header, compact && styles.headerCompact]}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} style={({ pressed }) => [styles.backButton, compact && styles.backButtonCompact, pressed && styles.pressed]}>
-            <Feather name="chevron-left" size={compact ? 28 : 30} color="#111216" strokeWidth={1.85} />
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
+            <Feather name="chevron-left" size={25} color="#111216" strokeWidth={1.85} />
           </Pressable>
           <View style={styles.headerTitleBlock}>
-            <Text numberOfLines={1} style={[styles.title, compact && styles.titleCompact]}>Settings</Text>
-            <Text numberOfLines={1} style={[styles.subtitle, compact && styles.subtitleCompact]}>Manage your app, privacy, and preferences.</Text>
+            <Text numberOfLines={1} style={styles.title}>Settings</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={styles.subtitle}>
+              Manage your app, privacy, and preferences.
+            </Text>
           </View>
-          <View style={[styles.headerSpacer, compact && styles.headerSpacerCompact]} />
+          <View style={styles.headerSpacer} />
         </View>
 
-        <View style={[styles.accountCard, compact && styles.accountCardCompact]}>
-          <View style={[styles.avatar, compact && styles.avatarCompact]}>
-            <Text style={[styles.avatarText, compact && styles.avatarTextCompact]}>{identity.initial}</Text>
+        <View style={styles.accountCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{identity.initial}</Text>
           </View>
           <View style={styles.identityBlock}>
-            <Text numberOfLines={1} style={[styles.name, compact && styles.nameCompact]}>{identity.name}</Text>
-            <Text numberOfLines={1} style={[styles.email, compact && styles.emailCompact]}>{identity.email}</Text>
+            <Text numberOfLines={1} style={styles.name}>{identity.name}</Text>
+            <Text numberOfLines={1} style={styles.email}>{identity.email}</Text>
           </View>
-          <View style={[styles.planPill, compact && styles.planPillCompact]}>
-            <Text style={[styles.planText, compact && styles.planTextCompact]}>Free plan</Text>
+          <View style={styles.planPill}>
+            <Text style={styles.planText}>Free plan</Text>
           </View>
         </View>
 
-        <SettingsCard title="GENERAL" rows={generalRows} compact={compact} />
-        <SettingsCard title="PRIVACY & DATA" rows={privacyRows} compact={compact} />
-        <SettingsCard title="APP & USAGE" rows={usageRows} compact={compact} />
+        <SettingsCard title="GENERAL" rows={generalRows} />
+        <SettingsCard title="PRIVACY & DATA" rows={privacyRows} />
+        <SettingsCard title="APP & USAGE" rows={usageRows} />
 
-        <View style={[styles.actions, compact && styles.actionsCompact]}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Save changes" style={({ pressed }) => [styles.primaryButton, compact && styles.actionButtonCompact, pressed && styles.primaryPressed]}>
-            <Text style={[styles.primaryButtonText, compact && styles.buttonTextCompact]}>Save changes</Text>
+        <View style={styles.actions}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Save changes" style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryPressed]}>
+            <Text style={styles.primaryButtonText}>Save changes</Text>
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={handleSignOut} style={({ pressed }) => [styles.secondaryButton, compact && styles.actionButtonCompact, pressed && styles.pressed]}>
-            <Text style={[styles.secondaryButtonText, compact && styles.buttonTextCompact]}>Sign out</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={handleSignOut} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
+            <Text style={styles.secondaryButtonText}>Sign out</Text>
           </Pressable>
         </View>
 
-        <View style={[styles.privacyLine, compact && styles.privacyLineCompact]}>
-          <Feather name="shield" size={compact ? 15 : 17} color="#8d9098" strokeWidth={1.75} />
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78} style={[styles.privacyText, compact && styles.privacyTextCompact]}>Private by design. You control your data.</Text>
+        <View style={styles.privacyLine}>
+          <Feather name="shield" size={12} color="#8d9098" strokeWidth={1.75} />
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.privacyText}>
+            Private by design. You control your data.
+          </Text>
         </View>
       </View>
     </SafeAreaView>
@@ -228,117 +225,77 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 6,
-    paddingBottom: 10,
-  },
-  contentCompact: {
-    paddingHorizontal: 22,
+    paddingHorizontal: 18,
     paddingTop: 0,
-    paddingBottom: 6,
+    paddingBottom: 1,
   },
   header: {
-    height: 88,
+    height: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  headerCompact: {
-    height: 70,
-  },
   backButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.72)',
   },
-  backButtonCompact: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
   headerTitleBlock: {
     flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
   },
   title: {
     color: '#111216',
-    fontSize: 26,
+    fontSize: 21,
     fontWeight: '700',
-    letterSpacing: -0.82,
-    lineHeight: 32,
+    letterSpacing: -0.72,
+    lineHeight: 25,
     textAlign: 'center',
-  },
-  titleCompact: {
-    fontSize: 24,
-    lineHeight: 29,
   },
   subtitle: {
-    marginTop: 7,
+    marginTop: 1,
     color: '#737680',
-    fontSize: 16.5,
+    fontSize: 12.2,
     fontWeight: '400',
-    letterSpacing: -0.34,
-    lineHeight: 21,
+    letterSpacing: -0.25,
+    lineHeight: 14,
     textAlign: 'center',
   },
-  subtitleCompact: {
-    marginTop: 4,
-    fontSize: 14.4,
-    lineHeight: 18,
-  },
   headerSpacer: {
-    width: 56,
-    height: 56,
-  },
-  headerSpacerCompact: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
   },
   accountCard: {
-    minHeight: 92,
-    borderRadius: 22,
+    minHeight: 54,
+    borderRadius: 17,
     backgroundColor: 'rgba(255,255,255,0.86)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.035)',
     shadowColor: '#0f172a',
     shadowOpacity: 0.026,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 17,
-    paddingHorizontal: 20,
-  },
-  accountCardCompact: {
-    minHeight: 76,
-    borderRadius: 20,
-    gap: 14,
-    paddingHorizontal: 17,
+    gap: 10,
+    paddingHorizontal: 13,
   },
   avatar: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#c9771b',
   },
-  avatarCompact: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
   avatarText: {
     color: '#ffffff',
-    fontSize: 27,
+    fontSize: 19,
     fontWeight: '500',
-  },
-  avatarTextCompact: {
-    fontSize: 23,
   },
   identityBlock: {
     flex: 1,
@@ -346,195 +303,135 @@ const styles = StyleSheet.create({
   },
   name: {
     color: '#111216',
-    fontSize: 20,
+    fontSize: 15.4,
     fontWeight: '700',
-    letterSpacing: -0.58,
-    lineHeight: 25,
-  },
-  nameCompact: {
-    fontSize: 17.4,
-    lineHeight: 21,
+    letterSpacing: -0.42,
+    lineHeight: 18,
   },
   email: {
-    marginTop: 5,
+    marginTop: 1,
     color: '#777982',
-    fontSize: 16.2,
+    fontSize: 12.2,
     fontWeight: '400',
-    letterSpacing: -0.3,
-    lineHeight: 20,
-  },
-  emailCompact: {
-    marginTop: 3,
-    fontSize: 14.2,
-    lineHeight: 17,
+    letterSpacing: -0.24,
+    lineHeight: 14,
   },
   planPill: {
-    minHeight: 36,
-    borderRadius: 18,
-    paddingHorizontal: 18,
+    minHeight: 26,
+    borderRadius: 13,
+    paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fbf3e8',
   },
-  planPillCompact: {
-    minHeight: 31,
-    borderRadius: 15.5,
-    paddingHorizontal: 14,
-  },
   planText: {
     color: '#a56813',
-    fontSize: 15.5,
+    fontSize: 12,
     fontWeight: '700',
-    letterSpacing: -0.22,
-  },
-  planTextCompact: {
-    fontSize: 13.8,
+    letterSpacing: -0.2,
   },
   card: {
     overflow: 'hidden',
-    borderRadius: 22,
-    marginTop: 15,
+    borderRadius: 16,
+    marginTop: 6,
     backgroundColor: 'rgba(255,255,255,0.86)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.035)',
     shadowColor: '#0f172a',
-    shadowOpacity: 0.024,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 10 },
-  },
-  cardCompact: {
-    borderRadius: 20,
-    marginTop: 11,
+    shadowOpacity: 0.02,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
   },
   sectionTitle: {
-    marginLeft: 17,
-    marginTop: 13,
-    marginBottom: 4,
+    marginLeft: 12,
+    marginTop: 5,
+    marginBottom: 0,
     color: '#737680',
-    fontSize: 13.4,
+    fontSize: 10.4,
     fontWeight: '700',
-    letterSpacing: 0.58,
-  },
-  sectionTitleCompact: {
-    marginLeft: 15,
-    marginTop: 9,
-    marginBottom: 1,
-    fontSize: 11.8,
-    letterSpacing: 0.48,
+    letterSpacing: 0.4,
   },
   row: {
-    minHeight: 56,
+    minHeight: 32,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 20,
-    paddingRight: 18,
-    gap: 18,
-  },
-  rowCompact: {
-    minHeight: 43,
-    paddingLeft: 17,
-    paddingRight: 16,
-    gap: 14,
+    paddingLeft: 13,
+    paddingRight: 12,
+    gap: 10,
   },
   rowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.064)',
+    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   iconSlot: {
-    width: 28,
+    width: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rowLabel: {
     flex: 1,
     color: '#111216',
-    fontSize: 17,
+    fontSize: 13.4,
     fontWeight: '500',
-    letterSpacing: -0.36,
-  },
-  rowLabelCompact: {
-    fontSize: 15,
+    letterSpacing: -0.28,
   },
   rowValue: {
     color: '#777982',
-    fontSize: 15.6,
+    fontSize: 12.3,
     fontWeight: '500',
-    letterSpacing: -0.28,
-    maxWidth: 92,
+    letterSpacing: -0.22,
+    maxWidth: 72,
     textAlign: 'right',
   },
-  rowValueCompact: {
-    fontSize: 13.8,
-    maxWidth: 82,
-  },
   actions: {
-    gap: 13,
-    marginTop: 16,
-  },
-  actionsCompact: {
-    gap: 9,
-    marginTop: 11,
+    gap: 6,
+    marginTop: 7,
   },
   primaryButton: {
-    height: 56,
-    borderRadius: 13,
+    height: 34,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#050507',
     shadowColor: '#0f172a',
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
   },
   secondaryButton: {
-    height: 56,
-    borderRadius: 13,
+    height: 34,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.64)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.07)',
   },
-  actionButtonCompact: {
-    height: 43,
-    borderRadius: 12,
-  },
   primaryButtonText: {
     color: '#ffffff',
-    fontSize: 17,
+    fontSize: 13.6,
     fontWeight: '700',
-    letterSpacing: -0.28,
+    letterSpacing: -0.22,
   },
   secondaryButtonText: {
     color: '#111216',
-    fontSize: 17,
+    fontSize: 13.6,
     fontWeight: '700',
-    letterSpacing: -0.28,
-  },
-  buttonTextCompact: {
-    fontSize: 15.5,
+    letterSpacing: -0.22,
   },
   privacyLine: {
-    minHeight: 30,
-    marginTop: 13,
+    minHeight: 15,
+    marginTop: 4,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 9,
-  },
-  privacyLineCompact: {
-    minHeight: 21,
-    marginTop: 8,
-    gap: 7,
+    gap: 5,
   },
   privacyText: {
     color: '#747780',
-    fontSize: 13.5,
+    fontSize: 10.4,
     fontWeight: '400',
-    letterSpacing: -0.22,
-  },
-  privacyTextCompact: {
-    fontSize: 12,
+    letterSpacing: -0.18,
   },
   pressed: {
     opacity: 0.72,
