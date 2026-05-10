@@ -1,9 +1,9 @@
 import { Feather, FontAwesome } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Pressable,
   StyleSheet,
@@ -75,12 +75,32 @@ export function KivoAuthScreen({ loading = false, onContinue }: KivoAuthScreenPr
   const { height, width } = useWindowDimensions();
   const [emailMode, setEmailMode] = useState(false);
   const [email, setEmail] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const isCompact = height < 780;
   const heroTop = Math.max(126, Math.min(156, height * 0.18));
   const buttonHeight = isCompact ? 56 : 58;
   const buttonGap = isCompact ? 12 : 14;
-  const authBottom = isCompact ? 16 : 22;
+  const baseAuthBottom = isCompact ? 16 : 22;
+  const authBottom = emailMode && keyboardHeight > 0 ? Math.max(baseAuthBottom, keyboardHeight + 10) : baseAuthBottom;
   const sidePadding = width < 370 ? 24 : 32;
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const show = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+
+    const hide = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   function handleMethod(method: KivoAuthMethod) {
     if (method === 'email' || method === 'signin') {
@@ -88,30 +108,32 @@ export function KivoAuthScreen({ loading = false, onContinue }: KivoAuthScreenPr
       return;
     }
 
+    Keyboard.dismiss();
     onContinue(method);
   }
 
   function handleEmailSubmit() {
+    Keyboard.dismiss();
     onContinue(emailMode ? 'email' : 'signin', email.trim());
+  }
+
+  function closeEmailMode() {
+    Keyboard.dismiss();
+    setEmailMode(false);
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.screen}>
+      <View style={styles.screen}>
         <View pointerEvents="none" style={styles.topGlow} />
         <View pointerEvents="none" style={styles.bottomGlow} />
+        {emailMode ? <Pressable accessibilityRole="button" accessibilityLabel="Dismiss keyboard" style={styles.dismissKeyboardLayer} onPress={Keyboard.dismiss} /> : null}
 
         <View style={[styles.hero, { top: heroTop }]}>
           <Text style={styles.wordmark}>Kivo</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={styles.tagline}>
-            Your personal AI operator.
-          </Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={styles.description}>
-            Plan your day, track what matters,
-          </Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.description, styles.descriptionSecond]}>
-            and let Kivo help before you ask.
-          </Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={styles.tagline}>{'Your personal AI operator.'}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={styles.description}>{'Plan your day, track what matters,'}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.description, styles.descriptionSecond]}>{'and let Kivo help before you ask.'}</Text>
         </View>
 
         <View style={[styles.authArea, { bottom: authBottom, paddingHorizontal: sidePadding }]}>
@@ -130,6 +152,7 @@ export function KivoAuthScreen({ loading = false, onContinue }: KivoAuthScreenPr
                 textContentType="emailAddress"
                 editable={!loading}
                 returnKeyType="send"
+                blurOnSubmit
                 onSubmitEditing={handleEmailSubmit}
                 style={styles.emailInput}
               />
@@ -142,7 +165,7 @@ export function KivoAuthScreen({ loading = false, onContinue }: KivoAuthScreenPr
               >
                 <Text style={styles.emailSubmitText}>Send sign-in link</Text>
               </Pressable>
-              <Pressable disabled={loading} onPress={() => setEmailMode(false)} style={({ pressed }) => [styles.emailBackButton, pressed && !loading ? styles.softPressed : null]}>
+              <Pressable disabled={loading} onPress={closeEmailMode} style={({ pressed }) => [styles.emailBackButton, pressed && !loading ? styles.softPressed : null]}>
                 <Text style={styles.emailBackText}>Back</Text>
               </Pressable>
             </View>
@@ -184,7 +207,7 @@ export function KivoAuthScreen({ loading = false, onContinue }: KivoAuthScreenPr
             </View>
           ) : null}
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -198,6 +221,10 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
     backgroundColor: '#f5f5f6',
+  },
+  dismissKeyboardLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
   },
   topGlow: {
     position: 'absolute',
@@ -261,6 +288,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
+    zIndex: 2,
   },
   buttons: {},
   authButton: {
