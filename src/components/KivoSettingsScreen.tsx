@@ -323,10 +323,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fbf3e8',
+    backgroundColor: '#ececef',
   },
   planText: {
-    color: '#a56813',
+    color: '#6c7078',
     fontSize: 13.8,
     fontWeight: '700',
     letterSpacing: -0.2,
