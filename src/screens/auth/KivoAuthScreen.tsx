@@ -1,12 +1,24 @@
 import { Feather, FontAwesome } from '@expo/vector-icons';
-import { ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export type KivoAuthMethod = 'apple' | 'google' | 'email' | 'signin';
 
 type KivoAuthScreenProps = {
   loading?: boolean;
-  onContinue: (method: KivoAuthMethod) => void;
+  onContinue: (method: KivoAuthMethod, email?: string) => void;
 };
 
 function GoogleMark() {
@@ -61,6 +73,8 @@ function AuthButton({ label, method, loading, secondary, icon, height, onPress }
 
 export function KivoAuthScreen({ loading = false, onContinue }: KivoAuthScreenProps) {
   const { height, width } = useWindowDimensions();
+  const [emailMode, setEmailMode] = useState(false);
+  const [email, setEmail] = useState('');
   const isCompact = height < 780;
   const heroTop = Math.max(126, Math.min(156, height * 0.18));
   const buttonHeight = isCompact ? 56 : 58;
@@ -68,9 +82,22 @@ export function KivoAuthScreen({ loading = false, onContinue }: KivoAuthScreenPr
   const authBottom = isCompact ? 16 : 22;
   const sidePadding = width < 370 ? 24 : 32;
 
+  function handleMethod(method: KivoAuthMethod) {
+    if (method === 'email' || method === 'signin') {
+      setEmailMode(true);
+      return;
+    }
+
+    onContinue(method);
+  }
+
+  function handleEmailSubmit() {
+    onContinue(emailMode ? 'email' : 'signin', email.trim());
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.screen}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.screen}>
         <View pointerEvents="none" style={styles.topGlow} />
         <View pointerEvents="none" style={styles.bottomGlow} />
 
@@ -88,24 +115,59 @@ export function KivoAuthScreen({ loading = false, onContinue }: KivoAuthScreenPr
         </View>
 
         <View style={[styles.authArea, { bottom: authBottom, paddingHorizontal: sidePadding }]}>
-          <View style={[styles.buttons, { gap: buttonGap }]}>
-            <AuthButton label="Continue with Apple" method="apple" icon="apple" height={buttonHeight} loading={loading} onPress={onContinue} />
-            <AuthButton label="Continue with Google" method="google" icon="google" height={buttonHeight} loading={loading} onPress={onContinue} />
-            <AuthButton label="Continue with email" method="email" icon="email" height={buttonHeight} secondary loading={loading} onPress={onContinue} />
-          </View>
+          {emailMode ? (
+            <View style={styles.emailCard}>
+              <Text style={styles.emailTitle}>Continue with email</Text>
+              <Text style={styles.emailSubtitle}>Enter your email and Kivo will send you a secure sign-in link.</Text>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                placeholderTextColor="#a0a2aa"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                editable={!loading}
+                returnKeyType="send"
+                onSubmitEditing={handleEmailSubmit}
+                style={styles.emailInput}
+              />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Send sign-in link"
+                disabled={loading}
+                onPress={handleEmailSubmit}
+                style={({ pressed }) => [styles.emailSubmitButton, pressed && !loading ? styles.authButtonPressed : null, loading ? styles.authButtonDisabled : null]}
+              >
+                <Text style={styles.emailSubmitText}>Send sign-in link</Text>
+              </Pressable>
+              <Pressable disabled={loading} onPress={() => setEmailMode(false)} style={({ pressed }) => [styles.emailBackButton, pressed && !loading ? styles.softPressed : null]}>
+                <Text style={styles.emailBackText}>Back</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={[styles.buttons, { gap: buttonGap }]}>
+              <AuthButton label="Continue with Apple" method="apple" icon="apple" height={buttonHeight} loading={loading} onPress={handleMethod} />
+              <AuthButton label="Continue with Google" method="google" icon="google" height={buttonHeight} loading={loading} onPress={handleMethod} />
+              <AuthButton label="Continue with email" method="email" icon="email" height={buttonHeight} secondary loading={loading} onPress={handleMethod} />
+            </View>
+          )}
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Sign in"
-            disabled={loading}
-            onPress={() => onContinue('signin')}
-            style={({ pressed }) => [styles.signInRow, pressed && !loading ? styles.softPressed : null]}
-          >
-            <Text numberOfLines={1} style={styles.signInMuted}>Already have an account?</Text>
-            <Text numberOfLines={1} style={styles.signInLink}>Sign in</Text>
-          </Pressable>
+          {!emailMode ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Sign in"
+              disabled={loading}
+              onPress={() => handleMethod('signin')}
+              style={({ pressed }) => [styles.signInRow, pressed && !loading ? styles.softPressed : null]}
+            >
+              <Text numberOfLines={1} style={styles.signInMuted}>Already have an account?</Text>
+              <Text numberOfLines={1} style={styles.signInLink}>Sign in</Text>
+            </Pressable>
+          ) : null}
 
-          <View style={styles.trustLine}>
+          <View style={[styles.trustLine, emailMode && styles.trustLineEmailMode]}>
             <Feather name="lock" size={13.5} color="#8e9098" strokeWidth={1.65} />
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={styles.trustText}>
               Private by design. You control your data.
@@ -122,7 +184,7 @@ export function KivoAuthScreen({ loading = false, onContinue }: KivoAuthScreenPr
             </View>
           ) : null}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -254,6 +316,70 @@ const styles = StyleSheet.create({
     width: 29,
     height: 29,
   },
+  emailCard: {
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.055)',
+    backgroundColor: 'rgba(255,255,255,0.91)',
+    paddingHorizontal: 17,
+    paddingTop: 16,
+    paddingBottom: 13,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.046,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 13 },
+  },
+  emailTitle: {
+    color: '#111216',
+    fontSize: 19,
+    fontWeight: '700',
+    letterSpacing: -0.56,
+  },
+  emailSubtitle: {
+    marginTop: 6,
+    color: '#747780',
+    fontSize: 13.8,
+    lineHeight: 18,
+    letterSpacing: -0.22,
+  },
+  emailInput: {
+    height: 50,
+    marginTop: 13,
+    borderRadius: 15,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: 'rgba(247,247,248,0.82)',
+    paddingHorizontal: 14,
+    color: '#111216',
+    fontSize: 16,
+    letterSpacing: -0.32,
+  },
+  emailSubmitButton: {
+    height: 48,
+    marginTop: 10,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#111216',
+  },
+  emailSubmitText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.35,
+  },
+  emailBackButton: {
+    height: 33,
+    marginTop: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emailBackText: {
+    color: '#6f7179',
+    fontSize: 14.5,
+    fontWeight: '600',
+    letterSpacing: -0.28,
+  },
   signInRow: {
     marginTop: 32,
     minHeight: 32,
@@ -283,6 +409,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+  },
+  trustLineEmailMode: {
+    marginTop: 15,
   },
   trustText: {
     color: '#747780',
