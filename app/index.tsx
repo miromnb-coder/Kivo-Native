@@ -1,19 +1,50 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, StyleSheet, View } from 'react-native';
+import * as ExpoLinking from 'expo-linking';
 import { KivoChatScreenStreaming } from '@/components/KivoChatScreenStreaming';
 import { getKivoSession, supabase } from '@/lib/supabase';
 import { KivoAuthScreen, type KivoAuthMethod } from '@/screens/auth/KivoAuthScreen';
 
-const KIVO_NATIVE_AUTH_REDIRECT_TO = 'kivonative://auth/callback';
+const AUTH_REDIRECT_TO = ExpoLinking.createURL('auth/callback');
 
-function getAuthCodeFromUrl(url: string) {
+type IncomingAuthParams = {
+  code: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  errorDescription: string | null;
+};
+
+function getIncomingAuthParams(url: string): IncomingAuthParams {
+  const params = new URLSearchParams();
+
+  function appendParams(rawParams?: string) {
+    if (!rawParams) return;
+
+    const cleanParams = rawParams.startsWith('?') || rawParams.startsWith('#') ? rawParams.slice(1) : rawParams;
+    const searchParams = new URLSearchParams(cleanParams);
+
+    searchParams.forEach((value, key) => {
+      params.set(key, value);
+    });
+  }
+
   try {
     const parsed = new URL(url);
-    return parsed.searchParams.get('code');
+    appendParams(parsed.search);
+    appendParams(parsed.hash);
   } catch {
-    const codeMatch = url.match(/[?&]code=([^&]+)/);
-    return codeMatch ? decodeURIComponent(codeMatch[1]) : null;
+    const [, queryAndHash = ''] = url.split('?');
+    const [query = '', hash = ''] = queryAndHash.split('#');
+    appendParams(query);
+    appendParams(hash);
   }
+
+  return {
+    code: params.get('code'),
+    accessToken: params.get('access_token'),
+    refreshToken: params.get('refresh_token'),
+    errorDescription: params.get('error_description') ?? params.get('error'),
+  };
 }
 
 export default function Index() {
@@ -59,7 +90,23 @@ export default function Index() {
   }, []);
 
   async function handleIncomingAuthUrl(url: string) {
-    const code = getAuthCodeFromUrl(url);
+    const { code, accessToken, refreshToken, errorDescription } = getIncomingAuthParams(url);
+
+    if (errorDescription) {
+      throw new Error(errorDescription);
+    }
+
+    if (accessToken && refreshToken) {
+      const { data, error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+
+      if (error) throw error;
+      setIsSignedIn(Boolean(data.session));
+      return;
+    }
+
     if (!code) return;
 
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
@@ -71,7 +118,7 @@ export default function Index() {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: KIVO_NATIVE_AUTH_REDIRECT_TO,
+        redirectTo: AUTH_REDIRECT_TO,
         skipBrowserRedirect: true,
       },
     });
@@ -101,7 +148,7 @@ export default function Index() {
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
       options: {
-        emailRedirectTo: KIVO_NATIVE_AUTH_REDIRECT_TO,
+        emailRedirectTo: AUTH_REDIRECT_TO,
       },
     });
 
