@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     borderRadius: 46,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#9a9da4',
+    backgroundColor: '#c9771b',
   },
   avatarText: {
     color: '#ffffff',
