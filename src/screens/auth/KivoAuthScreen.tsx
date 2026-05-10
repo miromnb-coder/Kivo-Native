@@ -58,10 +58,10 @@ function AuthButton({ label, method, loading, secondary, icon, height, onPress }
 export function KivoAuthScreen({ loading = false, onContinue }: KivoAuthScreenProps) {
   const { height, width } = useWindowDimensions();
   const isCompact = height < 780;
-  const heroTop = Math.max(176, Math.min(226, height * 0.265));
-  const buttonHeight = isCompact ? 58 : 64;
-  const buttonGap = isCompact ? 13 : 16;
-  const authBottom = isCompact ? 16 : 23;
+  const heroTop = Math.max(164, Math.min(196, height * 0.225));
+  const buttonHeight = isCompact ? 56 : 58;
+  const buttonGap = isCompact ? 12 : 14;
+  const authBottom = isCompact ? 16 : 22;
   const sidePadding = width < 370 ? 24 : 32;
 
   return (
@@ -254,8 +254,8 @@ const styles = StyleSheet.create({
     lineHeight: 35,
   },
   signInRow: {
-    marginTop: 38,
-    minHeight: 33,
+    marginTop: 32,
+    minHeight: 32,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     opacity: 0.68,
   },
   trustLine: {
-    marginTop: 20,
+    marginTop: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.28,
   },
   legalText: {
-    marginTop: 27,
+    marginTop: 24,
     color: '#6f7179',
     fontSize: 13.6,
     fontWeight: '400',
