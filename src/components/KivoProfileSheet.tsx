@@ -9,6 +9,7 @@ type Props = {
   bottomInset: number;
   onClose: () => void;
   onOpenProfile?: () => void;
+  onOpenUpgrade?: () => void;
 };
 
 type KivoProfileIdentity = {
@@ -67,7 +68,7 @@ function getIdentityFromUser(user: Awaited<ReturnType<typeof supabase.auth.getUs
   };
 }
 
-export function KivoProfileSheet({ drawerWidth, bottomInset, onClose, onOpenProfile }: Props) {
+export function KivoProfileSheet({ drawerWidth, bottomInset, onClose, onOpenProfile, onOpenUpgrade }: Props) {
   const [identity, setIdentity] = useState<KivoProfileIdentity>({ name: 'Kivo User', initial: 'K' });
 
   useEffect(() => {
@@ -137,7 +138,9 @@ export function KivoProfileSheet({ drawerWidth, bottomInset, onClose, onOpenProf
             <Text numberOfLines={1} style={styles.name}>{identity.name}</Text>
             <Text style={styles.plan}>Free plan</Text>
           </View>
-          <View style={styles.upgrade}><Text style={styles.upgradeText}>Upgrade to Plus</Text></View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Upgrade to Plus" onPress={onOpenUpgrade} style={({ pressed }) => [styles.upgrade, pressed && styles.pressed]}>
+            <Text style={styles.upgradeText}>Upgrade to Plus</Text>
+          </Pressable>
         </Pressable>
         {rows.map((row, index) => (
           <View key={row.label}>
