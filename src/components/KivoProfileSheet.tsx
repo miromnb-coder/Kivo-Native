@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { notifyKivoSignedOut } from '../lib/kivo-auth-events';
 import { supabase } from '../lib/supabase';
+import { KivoSettingsScreen } from './KivoSettingsScreen';
 import { KivoUpgradeScreen } from './KivoUpgradeScreen';
 
 type Props = {
@@ -72,6 +73,7 @@ function getIdentityFromUser(user: Awaited<ReturnType<typeof supabase.auth.getUs
 export function KivoProfileSheet({ drawerWidth, bottomInset, onClose, onOpenProfile, onOpenUpgrade }: Props) {
   const [identity, setIdentity] = useState<KivoProfileIdentity>({ name: 'Kivo User', initial: 'K' });
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -135,6 +137,11 @@ export function KivoProfileSheet({ drawerWidth, bottomInset, onClose, onOpenProf
 
     if (label === 'Profile') {
       onOpenProfile?.();
+      return;
+    }
+
+    if (label === 'Settings') {
+      setSettingsOpen(true);
     }
   }
 
@@ -171,6 +178,7 @@ export function KivoProfileSheet({ drawerWidth, bottomInset, onClose, onOpenProf
       </View>
 
       {upgradeOpen ? <KivoUpgradeScreen onBack={() => setUpgradeOpen(false)} /> : null}
+      {settingsOpen ? <KivoSettingsScreen onBack={() => setSettingsOpen(false)} /> : null}
     </View>
   );
 }
