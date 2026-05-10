@@ -1,5 +1,5 @@
 import { Feather, FontAwesome } from '@expo/vector-icons';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export type KivoAuthMethod = 'apple' | 'google' | 'email' | 'signin';
@@ -12,7 +12,11 @@ type KivoAuthScreenProps = {
 function GoogleMark() {
   return (
     <View style={styles.googleMark}>
-      <Text style={styles.googleLetter}>G</Text>
+      <Image
+        source={{ uri: 'https://developers.google.com/identity/images/g-logo.png' }}
+        style={styles.googleLogo}
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -58,7 +62,7 @@ function AuthButton({ label, method, loading, secondary, icon, height, onPress }
 export function KivoAuthScreen({ loading = false, onContinue }: KivoAuthScreenProps) {
   const { height, width } = useWindowDimensions();
   const isCompact = height < 780;
-  const heroTop = Math.max(164, Math.min(196, height * 0.225));
+  const heroTop = Math.max(126, Math.min(156, height * 0.18));
   const buttonHeight = isCompact ? 56 : 58;
   const buttonGap = isCompact ? 12 : 14;
   const authBottom = isCompact ? 16 : 22;
@@ -246,12 +250,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  googleLetter: {
-    color: '#4285f4',
-    fontSize: 32,
-    fontWeight: '700',
-    letterSpacing: -2,
-    lineHeight: 35,
+  googleLogo: {
+    width: 29,
+    height: 29,
   },
   signInRow: {
     marginTop: 32,
