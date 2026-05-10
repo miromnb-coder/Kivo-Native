@@ -1,6 +1,6 @@
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Props = { onBack: () => void };
@@ -9,17 +9,16 @@ type Connector = {
   id: string;
   name: string;
   category: Exclude<Filter, 'All'>;
-  icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  color: string;
+  logo: string;
 };
 
 const filters: Filter[] = ['All', 'Google', 'Microsoft'];
 const connectors: Connector[] = [
-  { id: 'drive', name: 'Google Drive', category: 'Google', icon: 'google-drive', color: '#1a73e8' },
-  { id: 'gmail', name: 'Gmail', category: 'Google', icon: 'gmail', color: '#ea4335' },
-  { id: 'calendar', name: 'Google Calendar', category: 'Google', icon: 'calendar-month', color: '#1a73e8' },
-  { id: 'outlook-calendar', name: 'Outlook Calendar', category: 'Microsoft', icon: 'microsoft-outlook', color: '#0078d4' },
-  { id: 'outlook-mail', name: 'Outlook Mail', category: 'Microsoft', icon: 'microsoft-outlook', color: '#0078d4' },
+  { id: 'drive', name: 'Google Drive', category: 'Google', logo: 'https://www.gstatic.com/images/branding/product/2x/drive_2020q4_48dp.png' },
+  { id: 'gmail', name: 'Gmail', category: 'Google', logo: 'https://www.gstatic.com/images/branding/product/2x/gmail_2020q4_48dp.png' },
+  { id: 'calendar', name: 'Google Calendar', category: 'Google', logo: 'https://www.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_31_2x.png' },
+  { id: 'outlook-calendar', name: 'Outlook Calendar', category: 'Microsoft', logo: 'https://res.cdn.office.net/assets/mail/file-icon/png/outlook_64x64.png' },
+  { id: 'outlook-mail', name: 'Outlook Mail', category: 'Microsoft', logo: 'https://res.cdn.office.net/assets/mail/file-icon/png/outlook_64x64.png' },
 ];
 
 export function KivoConnectedAppsScreen({ onBack }: Props) {
@@ -58,14 +57,14 @@ export function KivoConnectedAppsScreen({ onBack }: Props) {
         </View>
 
         <View style={styles.summaryCard}>
-          <View style={styles.summaryIcon}><Feather name="link" size={25} color="#111216" strokeWidth={1.75} /></View>
+          <View style={styles.summaryIcon}><Feather name="link" size={24} color="#111216" strokeWidth={1.75} /></View>
           <View style={styles.summaryCopy}>
-            <Text numberOfLines={1} style={styles.summaryTitle}>5 available services</Text>
-            <Text numberOfLines={1} style={styles.summaryText}>Connect tools you use every day.</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={styles.summaryTitle}>5 available services</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78} style={styles.summaryText}>Connect tools you use every day.</Text>
           </View>
           <Pressable accessibilityRole="button" accessibilityLabel="Browse all" onPress={showMore} style={({ pressed }) => [styles.browseButton, pressed && styles.pressed]}>
             <Text style={styles.browseText}>Browse all</Text>
-            <Feather name="chevron-right" size={20} color="#6f727b" strokeWidth={1.85} />
+            <Feather name="chevron-right" size={19} color="#6f727b" strokeWidth={1.85} />
           </Pressable>
         </View>
 
@@ -91,7 +90,7 @@ export function KivoConnectedAppsScreen({ onBack }: Props) {
             return (
               <View key={item.id} style={[styles.appRow, index < shown.length - 1 && styles.rowBorder]}>
                 <View style={styles.logoBox}>
-                  <MaterialCommunityIcons name={item.icon} size={35} color={item.color} />
+                  <Image source={{ uri: item.logo }} style={styles.logo} resizeMode="contain" />
                 </View>
                 <View style={styles.appCopy}>
                   <Text numberOfLines={1} style={styles.appName}>{item.name}</Text>
@@ -124,43 +123,44 @@ export function KivoConnectedAppsScreen({ onBack }: Props) {
 
 const styles = StyleSheet.create({
   safeArea: { ...StyleSheet.absoluteFillObject, zIndex: 189, backgroundColor: '#f5f5f6' },
-  content: { flex: 1, paddingHorizontal: 18, paddingBottom: 8, transform: [{ translateY: -8 }] },
-  header: { height: 82, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  content: { flex: 1, paddingHorizontal: 18, paddingBottom: 6, transform: [{ translateY: -10 }] },
+  header: { height: 78, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   backButton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.72)' },
   headerCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
   headerSpacer: { width: 48, height: 48 },
-  title: { color: '#111216', fontSize: 26, fontWeight: '700', letterSpacing: -0.84, lineHeight: 32 },
-  subtitle: { marginTop: 6, color: '#737680', fontSize: 15.2, letterSpacing: -0.3, lineHeight: 19 },
-  summaryCard: { minHeight: 88, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.84)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.055)', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 14 },
-  summaryIcon: { width: 54, height: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f2' },
+  title: { color: '#111216', fontSize: 24.5, fontWeight: '700', letterSpacing: -0.82, lineHeight: 30 },
+  subtitle: { marginTop: 5, color: '#737680', fontSize: 14.2, letterSpacing: -0.3, lineHeight: 18 },
+  summaryCard: { minHeight: 78, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.84)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.055)', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, gap: 13 },
+  summaryIcon: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f2' },
   summaryCopy: { flex: 1, minWidth: 0 },
-  summaryTitle: { color: '#111216', fontSize: 18.6, fontWeight: '700', letterSpacing: -0.48, lineHeight: 23 },
-  summaryText: { marginTop: 5, color: '#737680', fontSize: 13.7, letterSpacing: -0.24, lineHeight: 17 },
-  browseButton: { minHeight: 42, borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'rgba(255,255,255,0.72)', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14 },
-  browseText: { color: '#111216', fontSize: 14.8, fontWeight: '500' },
-  searchBar: { height: 56, borderRadius: 22, marginTop: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.07)', backgroundColor: 'rgba(255,255,255,0.56)', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 17, gap: 12 },
-  searchText: { color: '#777a84', fontSize: 16.5 },
-  filters: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  filter: { minHeight: 40, minWidth: 72, borderRadius: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.07)', backgroundColor: 'rgba(255,255,255,0.68)' },
+  summaryTitle: { color: '#111216', fontSize: 17.2, fontWeight: '700', letterSpacing: -0.48, lineHeight: 22 },
+  summaryText: { marginTop: 3, color: '#737680', fontSize: 13.1, letterSpacing: -0.24, lineHeight: 16 },
+  browseButton: { minHeight: 40, borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'rgba(255,255,255,0.72)', flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 13 },
+  browseText: { color: '#111216', fontSize: 14.2, fontWeight: '500' },
+  searchBar: { height: 50, borderRadius: 21, marginTop: 10, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.07)', backgroundColor: 'rgba(255,255,255,0.56)', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 17, gap: 12 },
+  searchText: { color: '#777a84', fontSize: 16 },
+  filters: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  filter: { minHeight: 38, minWidth: 72, borderRadius: 19, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.07)', backgroundColor: 'rgba(255,255,255,0.68)' },
   filterActive: { backgroundColor: '#050507', borderColor: '#050507' },
   filterText: { color: '#111216', fontSize: 13.7, fontWeight: '600' },
   filterTextActive: { color: '#ffffff' },
-  listCard: { overflow: 'hidden', borderRadius: 24, marginTop: 12, backgroundColor: 'rgba(255,255,255,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.045)' },
-  appRow: { minHeight: 86, flexDirection: 'row', alignItems: 'center', paddingLeft: 18, paddingRight: 17, gap: 15 },
+  listCard: { overflow: 'hidden', borderRadius: 24, marginTop: 10, backgroundColor: 'rgba(255,255,255,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.045)' },
+  appRow: { minHeight: 73, flexDirection: 'row', alignItems: 'center', paddingLeft: 17, paddingRight: 16, gap: 14 },
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.072)' },
-  logoBox: { width: 50, height: 50, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.72)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.045)' },
+  logoBox: { width: 47, height: 47, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.72)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.045)' },
+  logo: { width: 34, height: 34 },
   appCopy: { flex: 1, minWidth: 0 },
-  appName: { color: '#111216', fontSize: 18.2, fontWeight: '600', letterSpacing: -0.44, lineHeight: 23 },
-  appStatus: { marginTop: 5, color: '#777a84', fontSize: 14.2, letterSpacing: -0.24, lineHeight: 17 },
-  connectButton: { minHeight: 38, minWidth: 96, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.72)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.08)' },
+  appName: { color: '#111216', fontSize: 17.1, fontWeight: '600', letterSpacing: -0.42, lineHeight: 22 },
+  appStatus: { marginTop: 3, color: '#777a84', fontSize: 13.6, letterSpacing: -0.22, lineHeight: 16 },
+  connectButton: { minHeight: 36, minWidth: 94, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.72)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.08)' },
   connectedButton: { backgroundColor: '#ececef' },
-  connectText: { color: '#111216', fontSize: 15.2, fontWeight: '700' },
+  connectText: { color: '#111216', fontSize: 14.8, fontWeight: '700' },
   connectedText: { color: '#6c7078' },
-  moreButton: { height: 52, marginTop: 12, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.7)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.07)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  moreText: { color: '#111216', fontSize: 15.8, fontWeight: '600' },
-  privacyRow: { minHeight: 48, marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
-  privacyIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.46)' },
-  privacyTitle: { color: '#111216', fontSize: 14.5, fontWeight: '700' },
-  privacyText: { marginTop: 1, color: '#747780', fontSize: 13.4 },
+  moreButton: { height: 48, marginTop: 10, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.7)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.07)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  moreText: { color: '#111216', fontSize: 15.4, fontWeight: '600' },
+  privacyRow: { minHeight: 42, marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 11 },
+  privacyIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.46)' },
+  privacyTitle: { color: '#111216', fontSize: 13.8, fontWeight: '700' },
+  privacyText: { marginTop: 1, color: '#747780', fontSize: 12.8 },
   pressed: { opacity: 0.72, transform: [{ scale: 0.995 }] },
 });
