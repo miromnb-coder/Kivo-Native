@@ -2,6 +2,18 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Apply Kivo action row + sources",
+      "type": "shell",
+      "command": "node scripts/apply-kivo-action-row.js",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
       "label": "Install dependencies safe",
       "type": "shell",
       "command": "npm run install:safe",
@@ -95,7 +107,7 @@
     {
       "label": "Deploy Supabase kivo-chat",
       "type": "shell",
-      "command": "npx supabase functions deploy kivo-chat",
+      "command": "npx supabase functions deploy kivo-chat --no-verify-jwt",
       "group": "build",
       "problemMatcher": [],
       "presentation": {
