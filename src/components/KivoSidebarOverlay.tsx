@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteKivoConversation, renameKivoConversation } from '../lib/kivo-history';
+import { KivoAccountSheet } from './KivoAccountSheet';
 
 export type KivoNativeConversation = {
   id: string;
@@ -75,6 +76,7 @@ export function KivoSidebarOverlay({
   const [actionConversation, setActionConversation] = useState<KivoNativeConversation | null>(null);
   const [renamingConversation, setRenamingConversation] = useState<KivoNativeConversation | null>(null);
   const [deleteConversation, setDeleteConversation] = useState<KivoNativeConversation | null>(null);
+  const [accountSheetOpen, setAccountSheetOpen] = useState(false);
   const dragStartTimeRef = useRef(0);
   const dragModeRef = useRef<'idle' | 'horizontal' | 'vertical'>('idle');
   const recentItems = sidebarConversations.slice(0, 18);
@@ -92,6 +94,7 @@ export function KivoSidebarOverlay({
     setActionConversation(null);
     setRenamingConversation(null);
     setDeleteConversation(null);
+    setAccountSheetOpen(false);
     onClose();
   }
 
@@ -99,6 +102,7 @@ export function KivoSidebarOverlay({
     setActionConversation(null);
     setRenamingConversation(null);
     setDeleteConversation(null);
+    setAccountSheetOpen(false);
     onNewChat();
   }
 
@@ -106,6 +110,7 @@ export function KivoSidebarOverlay({
     setActionConversation(null);
     setRenamingConversation(null);
     setDeleteConversation(null);
+    setAccountSheetOpen(false);
     onOpenConversation?.(id);
     onClose();
   }
@@ -260,7 +265,12 @@ export function KivoSidebarOverlay({
           </ScrollView>
 
           <View style={[styles.footer, { paddingBottom: Math.max(22, insets.bottom + 22) }]}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Profile" style={({ pressed }) => [styles.avatarButton, pressed && styles.pressed]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open account menu"
+              onPress={() => setAccountSheetOpen(true)}
+              style={({ pressed }) => [styles.avatarButton, pressed && styles.pressed]}
+            >
               <Text style={styles.avatarText}>M</Text>
             </Pressable>
 
@@ -277,6 +287,8 @@ export function KivoSidebarOverlay({
 
         <View pointerEvents="box-only" style={styles.drawerGestureEdge} {...panResponder.panHandlers} />
       </Animated.View>
+
+      <KivoAccountSheet visible={accountSheetOpen} onClose={() => setAccountSheetOpen(false)} />
 
       {actionConversation ? (
         <ConversationActionSheet
