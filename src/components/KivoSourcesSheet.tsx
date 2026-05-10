@@ -53,14 +53,14 @@ export function KivoSourcesSheet({ open, sources, onClose }: Props) {
 
       <Animated.View style={[styles.sheet, { height: sheetHeight, paddingBottom: Math.max(18, insets.bottom + 6), transform: [{ translateY }] }]}>
         <View style={styles.handle} />
-        <Text style={styles.title}>Lähteet</Text>
+        <Text style={styles.title}>Sources</Text>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           {sources.slice(0, 1).map((source, index) => (
             <SourceRow key={sourceKey(source, index)} source={source} featured />
           ))}
 
-          {sources.length > 1 ? <Text style={styles.moreTitle}>Lisää</Text> : null}
+          {sources.length > 1 ? <Text style={styles.moreTitle}>More</Text> : null}
 
           {sources.slice(1).map((source, index) => (
             <SourceRow key={sourceKey(source, index + 1)} source={source} />
