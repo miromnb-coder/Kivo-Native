@@ -115,6 +115,11 @@ export default function Index() {
   async function handleAuthContinue(method: KivoAuthMethod, email?: string) {
     if (authLoading) return;
 
+    if (method === 'skip') {
+      setIsSignedIn(true);
+      return;
+    }
+
     if (method === 'apple') {
       Alert.alert('Apple sign-in is not ready yet', 'Apple sign-in needs Apple Developer setup first. Use Google or email for now.');
       return;
