@@ -95,7 +95,7 @@ function normalizeHistory(history: KivoChatBody['history']): ChatMessage[] {
   return history
     .slice(-10)
     .map((item) => ({
-      role: item?.role === 'assistant' ? 'assistant' as const : 'user' as const,
+      role: item?.role === 'assistant' ? ('assistant' as const) : ('user' as const),
       content: cleanText(item?.content, 4000),
     }))
     .filter((item) => item.content.length > 0);
@@ -119,7 +119,7 @@ function makeSource(title: string, url: string, date?: string): Source | null {
   const domain = domainFromUrl(cleanUrl);
   if (!domain) return null;
   return {
-    title: title.replace(/\s+/g, ' ').trim() || domain,
+    title: title.replace(/\s+/g, ' ').replace(/^[-*•\d.)\s]+/, '').trim() || domain,
     url: cleanUrl,
     domain,
     date,
@@ -128,12 +128,14 @@ function makeSource(title: string, url: string, date?: string): Source | null {
 
 function dedupeSources(sources: Source[]) {
   const seen = new Set<string>();
-  return sources.filter((source) => {
-    const key = source.url || `${source.domain}:${source.title}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  }).slice(0, 8);
+  return sources
+    .filter((source) => {
+      const key = source.url || `${source.domain}:${source.title}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return Boolean(source.title && source.domain && source.url);
+    })
+    .slice(0, 8);
 }
 
 function extractSourcesFromExecutedTools(executedTools: unknown): Source[] {
@@ -142,31 +144,24 @@ function extractSourcesFromExecutedTools(executedTools: unknown): Source[] {
 
   for (const tool of executedTools) {
     const item = tool as Record<string, unknown>;
-    const results = item.search_results ?? item.results ?? item.output;
+    const possibleResults = [item.search_results, item.results, item.output, item.content];
 
-    if (Array.isArray(results)) {
-      for (const result of results) {
-        const entry = result as Record<string, unknown>;
-        const url = typeof entry.url === 'string' ? entry.url : typeof entry.link === 'string' ? entry.link : '';
-        const title = typeof entry.title === 'string' ? entry.title : url;
-        const date = typeof entry.date === 'string' ? entry.date : typeof entry.published_date === 'string' ? entry.published_date : undefined;
-        if (url) {
-          const source = makeSource(title, url, date);
-          if (source) sources.push(source);
+    for (const results of possibleResults) {
+      if (Array.isArray(results)) {
+        for (const result of results) {
+          const entry = result as Record<string, unknown>;
+          const url = typeof entry.url === 'string' ? entry.url : typeof entry.link === 'string' ? entry.link : '';
+          const title = typeof entry.title === 'string' ? entry.title : url;
+          const date = typeof entry.date === 'string' ? entry.date : typeof entry.published_date === 'string' ? entry.published_date : undefined;
+          if (url) {
+            const source = makeSource(title, url, date);
+            if (source) sources.push(source);
+          }
         }
       }
-    }
 
-    if (typeof results === 'string') {
-      const chunks = results.split('\n').map((line) => line.trim()).filter(Boolean);
-      let currentTitle = '';
-      for (const line of chunks) {
-        if (/^title:/i.test(line)) currentTitle = line.replace(/^title:\s*/i, '').trim();
-        const urlMatch = line.match(/https?:\/\/\S+/);
-        if (urlMatch) {
-          const source = makeSource(currentTitle || line, urlMatch[0]);
-          if (source) sources.push(source);
-        }
+      if (typeof results === 'string') {
+        sources.push(...extractSourcesFromText(results).sources);
       }
     }
   }
@@ -174,12 +169,47 @@ function extractSourcesFromExecutedTools(executedTools: unknown): Source[] {
   return dedupeSources(sources);
 }
 
-function appendSources(content: string, sources: Source[]) {
-  if (!sources.length) return content.trim();
-  if (/\n\s*(sources|lähteet|lahteet)\s*:?\s*\n/i.test(content)) return content.trim();
+function extractSourcesFromText(content: string): { answer: string; sources: Source[] } {
+  const lines = content.replace(/\r\n/g, '\n').split('\n');
+  const sources: Source[] = [];
+  const answerLines: string[] = [];
+  let inSourcesSection = false;
 
-  const sourceLines = sources.slice(0, 5).map((source) => `- [${source.title}](${source.url})`);
-  return `${content.trim()}\n\nSources:\n${sourceLines.join('\n')}`;
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    const normalizedHeading = line.replace(/^#+\s*/, '').replace(/:$/, '').toLowerCase();
+
+    if (['sources', 'source', 'lähteet', 'lahteet'].includes(normalizedHeading)) {
+      inSourcesSection = true;
+      continue;
+    }
+
+    const markdownLinks = [...line.matchAll(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g)];
+    for (const match of markdownLinks) {
+      const source = makeSource(match[1], match[2]);
+      if (source) sources.push(source);
+    }
+
+    const urls = [...line.matchAll(/https?:\/\/[^\s)\]]+/g)];
+    for (const match of urls) {
+      const alreadyInMarkdown = markdownLinks.some((link) => link[2] === match[0]);
+      if (!alreadyInMarkdown) {
+        const source = makeSource(line.replace(match[0], '').replace(/🔗|lue koko artikkeli:?/gi, '').trim(), match[0]);
+        if (source) sources.push(source);
+      }
+    }
+
+    if (inSourcesSection) continue;
+    if (urls.length > 0 && /lue koko artikkeli|read full|source|lähde/i.test(line)) continue;
+    if (/^[-*•]\s+.*\[\d+†L\d+/i.test(line)) continue;
+
+    answerLines.push(rawLine);
+  }
+
+  return {
+    answer: answerLines.join('\n').replace(/\n{3,}/g, '\n\n').trim(),
+    sources: dedupeSources(sources),
+  };
 }
 
 function shouldUseSmartSearch(userMessage: string) {
@@ -224,13 +254,7 @@ function buildGroqPayload({ model, messages, temperature, maxTokens, stream = fa
   maxTokens: number;
   stream?: boolean;
 }) {
-  const payload: Record<string, unknown> = {
-    model,
-    messages,
-    temperature,
-    max_tokens: maxTokens,
-    stream,
-  };
+  const payload: Record<string, unknown> = { model, messages, temperature, max_tokens: maxTokens, stream };
 
   if (isCompoundModel(model)) {
     payload.compound_custom = { tools: { enabled_tools: ['web_search'] } };
@@ -265,16 +289,18 @@ async function callGroq({ groqApiKey, model, messages, temperature = 0.42, maxTo
     }
 
     const message = data?.choices?.[0]?.message;
-    const content = typeof message?.content === 'string' ? message.content.trim() : '';
-    const sources = extractSourcesFromExecutedTools(message?.executed_tools);
+    const rawContent = typeof message?.content === 'string' ? message.content.trim() : '';
+    const textParse = extractSourcesFromText(rawContent);
+    const toolSources = extractSourcesFromExecutedTools(message?.executed_tools);
+    const sources = dedupeSources([...toolSources, ...textParse.sources]);
 
-    if (!content) {
+    if (!rawContent) {
       return { ok: false, error: 'Groq returned an empty answer.', details: data, model };
     }
 
     return {
       ok: true,
-      content: appendSources(content, sources),
+      content: textParse.answer || rawContent,
       model,
       usedSearch: Boolean(sources.length || message?.executed_tools?.length),
       sources,
@@ -394,7 +420,8 @@ function buildSystemPrompt(hasImage: boolean, memoryContext: string, smartSearch
   if (smartSearchEnabled) {
     parts.push(
       'Use Groq Compound built-in web search for current information.',
-      'Prefer recent, reputable sources. Include a short Sources section with markdown links when search affects the answer.',
+      'Prefer recent, reputable sources.',
+      'Do not put raw URLs or a Sources/Lähteet section in the answer text. Sources are handled separately by the app UI.',
     );
   }
 
@@ -502,7 +529,14 @@ Deno.serve(async (request) => {
 
   if (body.stream && smartSearchEnabled) {
     const result = await callSmartSearchGroq({ groqApiKey, messages, maxTokens });
-    return textResponse(result.ok ? result.content : 'En saanut ajankohtaista hakua juuri nyt. Kokeile uudestaan hetken päästä.');
+    return jsonResponse({
+      answer: result.ok ? result.content : 'En saanut ajankohtaista hakua juuri nyt. Kokeile uudestaan hetken päästä.',
+      model: result.model,
+      usedVision: false,
+      usedMemory: Boolean(memoryContext),
+      usedSearch: result.ok ? result.usedSearch || result.sources.length > 0 : false,
+      sources: result.ok ? result.sources : [],
+    });
   }
 
   if (body.stream) {
