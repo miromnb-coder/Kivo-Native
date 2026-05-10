@@ -113,7 +113,7 @@ function KivoEmailAuthScreen({ email, loading, onBack, onChangeEmail, onSubmit }
           <Text style={styles.topBackText}>Back</Text>
         </Pressable>
 
-        <View style={[styles.emailContent, { paddingHorizontal: sidePadding, paddingTop: contentTop }]}>
+        <View pointerEvents="box-none" style={[styles.emailContent, { paddingHorizontal: sidePadding, paddingTop: contentTop }]}>
           <Text style={styles.emailWordmark}>Kivo</Text>
           <Text style={styles.emailScreenTitle}>Continue with email</Text>
           <Text style={styles.emailScreenSubtitle}>Enter your email to receive</Text>
@@ -153,7 +153,7 @@ function KivoEmailAuthScreen({ email, loading, onBack, onChangeEmail, onSubmit }
           </Pressable>
         </View>
 
-        <View style={[styles.emailFooter, { paddingHorizontal: sidePadding }]}>
+        <View pointerEvents="box-none" style={[styles.emailFooter, { paddingHorizontal: sidePadding }]}>
           <View style={styles.emailFooterTrustLine}>
             <Feather name="lock" size={13.5} color="#8e9098" strokeWidth={1.65} />
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={styles.trustText}>
