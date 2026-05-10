@@ -105,11 +105,11 @@ function SettingsCard({ title, rows }: { title: string; rows: SettingsRow[] }) {
           style={({ pressed }) => [styles.row, index < rows.length - 1 && styles.rowBorder, pressed && styles.pressed]}
         >
           <View style={styles.iconSlot}>
-            <Feather name={row.icon} size={18} color="#111216" strokeWidth={1.75} />
+            <Feather name={row.icon} size={21} color="#111216" strokeWidth={1.75} />
           </View>
           <Text numberOfLines={1} style={styles.rowLabel}>{row.label}</Text>
           {row.value ? <Text numberOfLines={1} style={styles.rowValue}>{row.value}</Text> : null}
-          <Feather name="chevron-right" size={18} color="#8f9097" strokeWidth={1.9} />
+          <Feather name="chevron-right" size={21} color="#8f9097" strokeWidth={1.9} />
         </Pressable>
       ))}
     </View>
@@ -169,7 +169,7 @@ export function KivoSettingsScreen({ onBack }: Props) {
       <View style={styles.content}>
         <View style={styles.header}>
           <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
-            <Feather name="chevron-left" size={25} color="#111216" strokeWidth={1.85} />
+            <Feather name="chevron-left" size={28} color="#111216" strokeWidth={1.85} />
           </Pressable>
           <View style={styles.headerTitleBlock}>
             <Text numberOfLines={1} style={styles.title}>Settings</Text>
@@ -207,7 +207,7 @@ export function KivoSettingsScreen({ onBack }: Props) {
         </View>
 
         <View style={styles.privacyLine}>
-          <Feather name="shield" size={12} color="#8d9098" strokeWidth={1.75} />
+          <Feather name="shield" size={14} color="#8d9098" strokeWidth={1.75} />
           <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.privacyText}>
             Private by design. You control your data.
           </Text>
@@ -227,18 +227,18 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 18,
     paddingTop: 0,
-    paddingBottom: 1,
+    paddingBottom: 2,
   },
   header: {
-    height: 52,
+    height: 64,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.72)',
@@ -250,51 +250,51 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#111216',
-    fontSize: 21,
+    fontSize: 24,
     fontWeight: '700',
-    letterSpacing: -0.72,
-    lineHeight: 25,
+    letterSpacing: -0.78,
+    lineHeight: 29,
     textAlign: 'center',
   },
   subtitle: {
-    marginTop: 1,
+    marginTop: 3,
     color: '#737680',
-    fontSize: 12.2,
+    fontSize: 14.2,
     fontWeight: '400',
-    letterSpacing: -0.25,
-    lineHeight: 14,
+    letterSpacing: -0.3,
+    lineHeight: 17,
     textAlign: 'center',
   },
   headerSpacer: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
   },
   accountCard: {
-    minHeight: 54,
-    borderRadius: 17,
+    minHeight: 66,
+    borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.86)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.035)',
     shadowColor: '#0f172a',
     shadowOpacity: 0.026,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 9 },
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 13,
+    gap: 13,
+    paddingHorizontal: 16,
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 47,
+    height: 47,
+    borderRadius: 23.5,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#c9771b',
   },
   avatarText: {
     color: '#ffffff',
-    fontSize: 19,
+    fontSize: 23,
     fontWeight: '500',
   },
   identityBlock: {
@@ -303,104 +303,104 @@ const styles = StyleSheet.create({
   },
   name: {
     color: '#111216',
-    fontSize: 15.4,
+    fontSize: 17.2,
     fontWeight: '700',
-    letterSpacing: -0.42,
-    lineHeight: 18,
+    letterSpacing: -0.48,
+    lineHeight: 21,
   },
   email: {
-    marginTop: 1,
+    marginTop: 2,
     color: '#777982',
-    fontSize: 12.2,
+    fontSize: 14.2,
     fontWeight: '400',
-    letterSpacing: -0.24,
-    lineHeight: 14,
+    letterSpacing: -0.26,
+    lineHeight: 17,
   },
   planPill: {
-    minHeight: 26,
-    borderRadius: 13,
-    paddingHorizontal: 10,
+    minHeight: 31,
+    borderRadius: 15.5,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fbf3e8',
   },
   planText: {
     color: '#a56813',
-    fontSize: 12,
+    fontSize: 13.8,
     fontWeight: '700',
     letterSpacing: -0.2,
   },
   card: {
     overflow: 'hidden',
-    borderRadius: 16,
-    marginTop: 6,
+    borderRadius: 19,
+    marginTop: 9,
     backgroundColor: 'rgba(255,255,255,0.86)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.035)',
     shadowColor: '#0f172a',
-    shadowOpacity: 0.02,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.022,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 9 },
   },
   sectionTitle: {
-    marginLeft: 12,
-    marginTop: 5,
+    marginLeft: 14,
+    marginTop: 7,
     marginBottom: 0,
     color: '#737680',
-    fontSize: 10.4,
+    fontSize: 11.7,
     fontWeight: '700',
-    letterSpacing: 0.4,
+    letterSpacing: 0.48,
   },
   row: {
-    minHeight: 32,
+    minHeight: 38,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 13,
-    paddingRight: 12,
-    gap: 10,
+    paddingLeft: 15,
+    paddingRight: 14,
+    gap: 12,
   },
   rowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   iconSlot: {
-    width: 24,
+    width: 25,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rowLabel: {
     flex: 1,
     color: '#111216',
-    fontSize: 13.4,
+    fontSize: 15,
     fontWeight: '500',
-    letterSpacing: -0.28,
+    letterSpacing: -0.32,
   },
   rowValue: {
     color: '#777982',
-    fontSize: 12.3,
+    fontSize: 13.8,
     fontWeight: '500',
-    letterSpacing: -0.22,
-    maxWidth: 72,
+    letterSpacing: -0.24,
+    maxWidth: 82,
     textAlign: 'right',
   },
   actions: {
-    gap: 6,
-    marginTop: 7,
+    gap: 8,
+    marginTop: 9,
   },
   primaryButton: {
-    height: 34,
-    borderRadius: 10,
+    height: 42,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#050507',
     shadowColor: '#0f172a',
-    shadowOpacity: 0.06,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.07,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 9 },
   },
   secondaryButton: {
-    height: 34,
-    borderRadius: 10,
+    height: 42,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.64)',
@@ -409,29 +409,29 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#ffffff',
-    fontSize: 13.6,
+    fontSize: 15.4,
     fontWeight: '700',
-    letterSpacing: -0.22,
+    letterSpacing: -0.25,
   },
   secondaryButtonText: {
     color: '#111216',
-    fontSize: 13.6,
+    fontSize: 15.4,
     fontWeight: '700',
-    letterSpacing: -0.22,
+    letterSpacing: -0.25,
   },
   privacyLine: {
-    minHeight: 15,
-    marginTop: 4,
+    minHeight: 20,
+    marginTop: 6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
+    gap: 6,
   },
   privacyText: {
     color: '#747780',
-    fontSize: 10.4,
+    fontSize: 11.8,
     fontWeight: '400',
-    letterSpacing: -0.18,
+    letterSpacing: -0.2,
   },
   pressed: {
     opacity: 0.72,
