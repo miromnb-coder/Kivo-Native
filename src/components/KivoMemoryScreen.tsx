@@ -43,14 +43,14 @@ function MemorySection({ title, rows, compact = false }: { title: string; rows: 
           style={({ pressed }) => [styles.row, compact && styles.rowCompact, index < rows.length - 1 && styles.rowBorder, pressed && styles.pressed]}
         >
           <View style={styles.iconSlot}>
-            <Feather name={row.icon} size={compact ? 21 : 22} color="#111216" strokeWidth={1.72} />
+            <Feather name={row.icon} size={compact ? 19 : 20} color="#111216" strokeWidth={1.72} />
           </View>
           <View style={styles.rowCopy}>
             <Text numberOfLines={1} style={[styles.rowLabel, compact && styles.recentLabel]}>{row.label}</Text>
             {row.detail ? <Text numberOfLines={1} style={styles.rowDetail}>{row.detail}</Text> : null}
           </View>
           {row.value ? <Text numberOfLines={1} style={styles.rowValue}>{row.value}</Text> : null}
-          <Feather name="chevron-right" size={21} color="#8f9097" strokeWidth={1.9} />
+          <Feather name="chevron-right" size={20} color="#8f9097" strokeWidth={1.9} />
         </Pressable>
       ))}
     </View>
@@ -86,7 +86,7 @@ export function KivoMemoryScreen({ onBack }: Props) {
 
         <View style={styles.statusCard}>
           <View style={styles.memoryIconBox}>
-            <Feather name="cpu" size={46} color="#111216" strokeWidth={1.42} />
+            <Feather name="cpu" size={40} color="#111216" strokeWidth={1.42} />
           </View>
           <View style={styles.statusCopy}>
             <Text numberOfLines={1} style={styles.statusTitle}>Memory is on</Text>
@@ -111,7 +111,7 @@ export function KivoMemoryScreen({ onBack }: Props) {
         </View>
 
         <View style={styles.privacyLine}>
-          <Feather name="shield" size={14} color="#8d9098" strokeWidth={1.75} />
+          <Feather name="shield" size={13} color="#8d9098" strokeWidth={1.75} />
           <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={styles.privacyText}>
             Private by design. You control your data.
           </Text>
@@ -130,11 +130,11 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 18,
-    paddingBottom: 7,
-    transform: [{ translateY: -8 }],
+    paddingBottom: 4,
+    transform: [{ translateY: -18 }],
   },
   header: {
-    height: 82,
+    height: 70,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -158,23 +158,23 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#111216',
-    fontSize: 28,
+    fontSize: 27,
     fontWeight: '700',
     letterSpacing: -0.9,
-    lineHeight: 34,
+    lineHeight: 32,
     textAlign: 'center',
   },
   subtitle: {
-    marginTop: 5,
+    marginTop: 3,
     color: '#737680',
-    fontSize: 14.7,
+    fontSize: 13.8,
     fontWeight: '400',
     letterSpacing: -0.28,
-    lineHeight: 18,
+    lineHeight: 16,
     textAlign: 'center',
   },
   statusCard: {
-    minHeight: 97,
+    minHeight: 84,
     borderRadius: 23,
     backgroundColor: 'rgba(255,255,255,0.86)',
     borderWidth: StyleSheet.hairlineWidth,
@@ -185,12 +185,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 9 },
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    gap: 15,
+    paddingHorizontal: 17,
+    gap: 13,
   },
   memoryIconBox: {
-    width: 60,
-    height: 60,
+    width: 54,
+    height: 54,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -200,37 +200,37 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     color: '#111216',
-    fontSize: 20,
+    fontSize: 18.8,
     fontWeight: '700',
     letterSpacing: -0.58,
-    lineHeight: 25,
+    lineHeight: 23,
   },
   statusText: {
-    marginTop: 6,
+    marginTop: 3,
     color: '#737680',
-    fontSize: 14.2,
+    fontSize: 13.2,
     fontWeight: '400',
     letterSpacing: -0.2,
-    lineHeight: 19,
+    lineHeight: 16,
   },
   activePill: {
-    minHeight: 32,
-    borderRadius: 16,
-    paddingHorizontal: 17,
+    minHeight: 30,
+    borderRadius: 15,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ececef',
   },
   activeText: {
     color: '#6c7078',
-    fontSize: 14.2,
+    fontSize: 13.8,
     fontWeight: '700',
     letterSpacing: -0.22,
   },
   card: {
     overflow: 'hidden',
     borderRadius: 22,
-    marginTop: 10,
+    marginTop: 7,
     backgroundColor: 'rgba(255,255,255,0.86)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(0,0,0,0.035)',
@@ -241,15 +241,15 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     marginLeft: 18,
-    marginTop: 10,
-    marginBottom: 2,
+    marginTop: 7,
+    marginBottom: 0,
     color: '#737680',
-    fontSize: 12.4,
+    fontSize: 11.6,
     fontWeight: '700',
-    letterSpacing: 1.55,
+    letterSpacing: 1.5,
   },
   row: {
-    minHeight: 50,
+    minHeight: 41,
     flexDirection: 'row',
     alignItems: 'center',
     paddingLeft: 18,
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   rowCompact: {
-    minHeight: 43,
+    minHeight: 35,
   },
   rowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -274,38 +274,38 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     color: '#111216',
-    fontSize: 16.5,
+    fontSize: 15.3,
     fontWeight: '500',
     letterSpacing: -0.32,
-    lineHeight: 20,
+    lineHeight: 18,
   },
   recentLabel: {
-    fontSize: 13.9,
+    fontSize: 13,
     fontWeight: '500',
-    lineHeight: 17,
+    lineHeight: 15,
   },
   rowDetail: {
-    marginTop: 2,
+    marginTop: 1,
     color: '#747780',
-    fontSize: 11.8,
+    fontSize: 10.8,
     fontWeight: '400',
     letterSpacing: -0.16,
-    lineHeight: 14,
+    lineHeight: 12,
   },
   rowValue: {
     color: '#737680',
-    fontSize: 14.6,
+    fontSize: 14,
     fontWeight: '500',
     letterSpacing: -0.24,
     maxWidth: 54,
     textAlign: 'right',
   },
   actions: {
-    gap: 8,
-    marginTop: 10,
+    gap: 6,
+    marginTop: 7,
   },
   primaryButton: {
-    height: 47,
+    height: 42,
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
@@ -317,12 +317,12 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 15.4,
     fontWeight: '700',
     letterSpacing: -0.25,
   },
   secondaryButton: {
-    height: 45,
+    height: 38,
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
@@ -332,13 +332,13 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: '#111216',
-    fontSize: 15.8,
+    fontSize: 15,
     fontWeight: '700',
     letterSpacing: -0.25,
   },
   privacyLine: {
-    minHeight: 20,
-    marginTop: 5,
+    minHeight: 17,
+    marginTop: 3,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
   },
   privacyText: {
     color: '#747780',
-    fontSize: 11.8,
+    fontSize: 11,
     fontWeight: '400',
     letterSpacing: -0.2,
   },
