@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { notifyKivoSignedOut } from '../lib/kivo-auth-events';
 import { supabase } from '../lib/supabase';
+import { KivoConnectedAppsScreen } from './KivoConnectedAppsScreen';
 import { KivoSettingsScreen } from './KivoSettingsScreen';
 import { KivoUpgradeScreen } from './KivoUpgradeScreen';
 
@@ -74,6 +75,7 @@ export function KivoProfileSheet({ drawerWidth, bottomInset, onClose, onOpenProf
   const [identity, setIdentity] = useState<KivoProfileIdentity>({ name: 'Kivo User', initial: 'K' });
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [connectedAppsOpen, setConnectedAppsOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -140,6 +142,11 @@ export function KivoProfileSheet({ drawerWidth, bottomInset, onClose, onOpenProf
       return;
     }
 
+    if (label === 'Connected apps') {
+      setConnectedAppsOpen(true);
+      return;
+    }
+
     if (label === 'Settings') {
       setSettingsOpen(true);
     }
@@ -179,6 +186,7 @@ export function KivoProfileSheet({ drawerWidth, bottomInset, onClose, onOpenProf
 
       {upgradeOpen ? <KivoUpgradeScreen onBack={() => setUpgradeOpen(false)} /> : null}
       {settingsOpen ? <KivoSettingsScreen onBack={() => setSettingsOpen(false)} /> : null}
+      {connectedAppsOpen ? <KivoConnectedAppsScreen onBack={() => setConnectedAppsOpen(false)} /> : null}
     </View>
   );
 }
