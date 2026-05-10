@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteKivoConversation, renameKivoConversation } from '../lib/kivo-history';
+import { supabase } from '../lib/supabase';
 import { KivoProfileSheet } from './KivoProfileSheet';
 
 export type KivoNativeConversation = {
@@ -51,10 +52,56 @@ type RecentItemProps = {
   onLongPress?: () => void;
 };
 
+type SidebarIdentity = {
+  name: string;
+  initial: string;
+};
+
 const SIDEBAR_BACKGROUND = '#f4f4f6';
 
 function clamp(value: number, min = 0, max = 1) {
   return Math.min(max, Math.max(min, value));
+}
+
+function cleanDisplayName(value?: unknown) {
+  if (typeof value !== 'string') return null;
+
+  const cleanValue = value.trim();
+  return cleanValue.length > 0 ? cleanValue : null;
+}
+
+function getNameFromEmail(email?: string | null) {
+  if (!email) return null;
+
+  const localPart = email.split('@')[0]?.trim();
+  if (!localPart) return null;
+
+  return localPart
+    .replace(/[._-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function getInitial(name: string) {
+  const firstCharacter = name.trim().match(/[A-Za-zÅÄÖåäö0-9]/)?.[0];
+  return firstCharacter ? firstCharacter.toUpperCase() : 'K';
+}
+
+function getIdentityFromUser(user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user']): SidebarIdentity {
+  const metadata = user?.user_metadata ?? {};
+  const name =
+    cleanDisplayName(metadata.full_name) ??
+    cleanDisplayName(metadata.name) ??
+    cleanDisplayName(metadata.display_name) ??
+    cleanDisplayName(metadata.user_name) ??
+    getNameFromEmail(user?.email) ??
+    'Kivo User';
+
+  return {
+    name,
+    initial: getInitial(name),
+  };
 }
 
 export function KivoSidebarOverlay({
@@ -77,6 +124,7 @@ export function KivoSidebarOverlay({
   const [renamingConversation, setRenamingConversation] = useState<KivoNativeConversation | null>(null);
   const [deleteConversation, setDeleteConversation] = useState<KivoNativeConversation | null>(null);
   const [accountSheetOpen, setAccountSheetOpen] = useState(false);
+  const [identity, setIdentity] = useState<SidebarIdentity>({ name: 'Kivo User', initial: 'K' });
   const dragStartTimeRef = useRef(0);
   const dragModeRef = useRef<'idle' | 'horizontal' | 'vertical'>('idle');
   const recentItems = sidebarConversations.slice(0, 18);
@@ -89,6 +137,33 @@ export function KivoSidebarOverlay({
   useEffect(() => {
     setSidebarConversations(conversations);
   }, [conversations]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadIdentity() {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+
+        if (error) {
+          console.warn('Failed to load Kivo sidebar identity', error);
+          return;
+        }
+
+        if (mounted) {
+          setIdentity(getIdentityFromUser(data.user));
+        }
+      } catch (error) {
+        console.warn('Failed to load Kivo sidebar identity', error);
+      }
+    }
+
+    loadIdentity();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   function closeMenu() {
     setActionConversation(null);
@@ -267,11 +342,11 @@ export function KivoSidebarOverlay({
           <View style={[styles.footer, { paddingBottom: Math.max(22, insets.bottom + 22) }]}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Open account menu"
+              accessibilityLabel={`Open account menu for ${identity.name}`}
               onPress={() => setAccountSheetOpen(true)}
               style={({ pressed }) => [styles.avatarButton, pressed && styles.pressed]}
             >
-              <Text style={styles.avatarText}>M</Text>
+              <Text style={styles.avatarText}>{identity.initial}</Text>
             </Pressable>
 
             <Pressable
