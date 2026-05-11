@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, Image, Keyboard, PanResponder, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../theme/colors';
 import { askKivoAiStream } from '../lib/kivo-ai';
 import {
   createConversationTitle,
@@ -12,6 +11,8 @@ import {
   type KivoConversationSummary,
   type KivoStoredMessage,
 } from '../lib/kivo-history';
+import { colors } from '../theme/colors';
+import { KivoAgentThinkingIndicator, type KivoAgentThinkingStatus } from './KivoAgentThinkingIndicator';
 import { KivoComposer } from './KivoComposer';
 import { KivoPlusSheet, type RecentPhoto } from './KivoPlusSheet';
 import { KivoSidebarOverlay } from './KivoSidebarOverlay';
@@ -109,7 +110,7 @@ function KivoTableBlock({ table }: { table: TableBlock }) {
 
 function KivoAssistantContent({ text }: { text: string }) {
   const lines = text.split('\n');
-  const blocks: JSX.Element[] = [];
+  const blocks: ReactNode[] = [];
   let index = 0;
 
   while (index < lines.length) {
@@ -195,52 +196,6 @@ function KivoAssistantContent({ text }: { text: string }) {
   return <View style={styles.assistantContent}>{blocks}</View>;
 }
 
-function KivoThinkingLine() {
-  const dotOne = useRef(new Animated.Value(0.34)).current;
-  const dotTwo = useRef(new Animated.Value(0.34)).current;
-  const dotThree = useRef(new Animated.Value(0.34)).current;
-  const shimmer = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const makeDotLoop = (dot: Animated.Value, delay: number) => Animated.loop(
-      Animated.sequence([
-        Animated.delay(delay),
-        Animated.timing(dot, { toValue: 1, duration: 260, useNativeDriver: true }),
-        Animated.timing(dot, { toValue: 0.34, duration: 360, useNativeDriver: true }),
-      ]),
-    );
-
-    const loops = [
-      makeDotLoop(dotOne, 0),
-      makeDotLoop(dotTwo, 120),
-      makeDotLoop(dotThree, 240),
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(shimmer, { toValue: 1, duration: 900, useNativeDriver: true }),
-          Animated.timing(shimmer, { toValue: 0, duration: 900, useNativeDriver: true }),
-        ]),
-      ),
-    ];
-
-    loops.forEach((loop) => loop.start());
-
-    return () => loops.forEach((loop) => loop.stop());
-  }, [dotOne, dotThree, dotTwo, shimmer]);
-
-  const textOpacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.46, 0.86] });
-
-  return (
-    <View style={styles.thinkingLine}>
-      <Animated.Text style={[styles.thinkingText, { opacity: textOpacity }]}>Kivo is thinking</Animated.Text>
-      <View style={styles.thinkingDots}>
-        <Animated.View style={[styles.thinkingDot, { opacity: dotOne }]} />
-        <Animated.View style={[styles.thinkingDot, { opacity: dotTwo }]} />
-        <Animated.View style={[styles.thinkingDot, { opacity: dotThree }]} />
-      </View>
-    </View>
-  );
-}
-
 export function KivoChatScreenStreaming() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -250,7 +205,7 @@ export function KivoChatScreenStreaming() {
   const [conversations, setConversations] = useState<KivoConversationSummary[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<RecentPhoto | null>(null);
-  const [assistantThinking, setAssistantThinking] = useState(false);
+  const [assistantStatus, setAssistantStatus] = useState<KivoAgentThinkingStatus>('idle');
   const [plusOpen, setPlusOpen] = useState(false);
   const [plusExpanded, setPlusExpanded] = useState(false);
   const [composerActive, setComposerActive] = useState(false);
@@ -272,6 +227,7 @@ export function KivoChatScreenStreaming() {
   const sidebarProgressRef = useRef(0);
   const dashboardOpacity = useRef(new Animated.Value(1)).current;
   const dashboardTranslateY = useRef(new Animated.Value(0)).current;
+  const isAssistantActive = assistantStatus !== 'idle';
   const shouldShowTodayDashboard = messages.length === 0 && !activeConversationId && !composerActive && !plusOpen;
   const chatBottomPadding = BASE_CHAT_BOTTOM_PADDING + keyboardHeight;
 
@@ -392,8 +348,8 @@ export function KivoChatScreenStreaming() {
   }, [insets.bottom]);
 
   useEffect(() => {
-    if (messages.length > 0 || assistantThinking) scrollChatToEnd(true);
-  }, [assistantThinking, messages.length]);
+    if (messages.length > 0 || isAssistantActive) scrollChatToEnd(true);
+  }, [isAssistantActive, messages.length]);
 
   useEffect(() => {
     Animated.parallel([
@@ -446,61 +402,81 @@ export function KivoChatScreenStreaming() {
     setMessages((current) => [...current, userMessage]);
     setSelectedPhoto(null);
     setComposerActive(false);
-    setAssistantThinking(true);
+    setAssistantStatus('thinking');
     scrollChatToEnd(true, true);
 
-    const conversation = existingConversationId
-      ? conversations.find((item) => item.id === existingConversationId) ?? { id: existingConversationId, title: conversationTitle }
-      : await createKivoConversation(conversationTitle);
+    try {
+      const conversation = existingConversationId
+        ? conversations.find((item) => item.id === existingConversationId) ?? { id: existingConversationId, title: conversationTitle }
+        : await createKivoConversation(conversationTitle);
 
-    if (requestIdRef.current !== requestId) return;
+      if (requestIdRef.current !== requestId) return;
 
-    if (!existingConversationId) {
-      setActiveConversationId(conversation.id);
-      upsertConversation(conversation);
+      if (!existingConversationId) {
+        setActiveConversationId(conversation.id);
+        upsertConversation(conversation);
+      }
+
+      await saveKivoMessage(conversation.id, userMessage);
+
+      let assistantInserted = false;
+      let streamedText = '';
+
+      const finalAnswer = await askKivoAiStream({
+        message,
+        photo: photoForMessage,
+        history: historyForAi,
+        onDelta: (delta) => {
+          if (requestIdRef.current !== requestId) return;
+          streamedText += delta;
+          setAssistantStatus('writing');
+
+          setMessages((current) => {
+            if (!assistantInserted && !current.some((item) => item.id === assistantMessageId)) {
+              assistantInserted = true;
+              return [...current, { id: assistantMessageId, role: 'assistant', text: streamedText }];
+            }
+
+            return current.map((item) => (item.id === assistantMessageId ? { ...item, text: streamedText } : item));
+          });
+
+          scrollChatToEnd(false);
+        },
+      });
+
+      if (requestIdRef.current !== requestId) return;
+
+      const cleanAnswer = finalAnswer.trim() || streamedText.trim();
+      setAssistantStatus('idle');
+
+      setMessages((current) => {
+        const hasAssistant = current.some((item) => item.id === assistantMessageId);
+        if (!hasAssistant) return [...current, { id: assistantMessageId, role: 'assistant', text: cleanAnswer }];
+        return current.map((item) => (item.id === assistantMessageId ? { ...item, text: cleanAnswer } : item));
+      });
+
+      scrollChatToEnd(true);
+      await saveKivoMessage(conversation.id, { id: assistantMessageId, role: 'assistant', text: cleanAnswer });
+      await refreshConversations();
+    } catch (error) {
+      console.warn('Kivo AI response failed', error);
+      if (requestIdRef.current !== requestId) return;
+
+      setAssistantStatus('error');
+      setMessages((current) => [
+        ...current,
+        {
+          id: assistantMessageId,
+          role: 'assistant',
+          text: 'I could not finish the response. Try again in a moment.',
+        },
+      ]);
+      responseTimerRef.current = setTimeout(() => {
+        if (requestIdRef.current === requestId) setAssistantStatus('idle');
+        responseTimerRef.current = null;
+      }, 1200);
+      scrollChatToEnd(true, true);
     }
-
-    await saveKivoMessage(conversation.id, userMessage);
-
-    let assistantInserted = false;
-    let streamedText = '';
-
-    const finalAnswer = await askKivoAiStream({
-      message,
-      photo: photoForMessage,
-      history: historyForAi,
-      onDelta: (delta) => {
-        if (requestIdRef.current !== requestId) return;
-        streamedText += delta;
-        setAssistantThinking(false);
-
-        setMessages((current) => {
-          if (!assistantInserted && !current.some((item) => item.id === assistantMessageId)) {
-            assistantInserted = true;
-            return [...current, { id: assistantMessageId, role: 'assistant', text: streamedText }];
-          }
-
-          return current.map((item) => (item.id === assistantMessageId ? { ...item, text: streamedText } : item));
-        });
-
-        scrollChatToEnd(false);
-      },
-    });
-
-    if (requestIdRef.current !== requestId) return;
-
-    const cleanAnswer = finalAnswer.trim() || streamedText.trim();
-    setAssistantThinking(false);
-
-    setMessages((current) => {
-      const hasAssistant = current.some((item) => item.id === assistantMessageId);
-      if (!hasAssistant) return [...current, { id: assistantMessageId, role: 'assistant', text: cleanAnswer }];
-      return current.map((item) => (item.id === assistantMessageId ? { ...item, text: cleanAnswer } : item));
-    });
-
-    scrollChatToEnd(true);
-    await saveKivoMessage(conversation.id, { id: assistantMessageId, role: 'assistant', text: cleanAnswer });
-    await refreshConversations();
   }
 
   async function openConversation(conversationId: string) {
@@ -512,7 +488,7 @@ export function KivoChatScreenStreaming() {
     if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
 
     shouldStickToBottomRef.current = true;
-    setAssistantThinking(false);
+    setAssistantStatus('idle');
     setSelectedPhoto(null);
     setComposerActive(false);
     setActiveConversationId(conversationId);
@@ -557,7 +533,7 @@ export function KivoChatScreenStreaming() {
     requestIdRef.current += 1;
     conversationLoadIdRef.current += 1;
     shouldStickToBottomRef.current = true;
-    setAssistantThinking(false);
+    setAssistantStatus('idle');
     setMessages([]);
     setSelectedPhoto(null);
     setActiveConversationId(null);
@@ -677,7 +653,7 @@ export function KivoChatScreenStreaming() {
                   </View>
                 )
               ))}
-              {assistantThinking ? <KivoThinkingLine /> : null}
+              {isAssistantActive ? <KivoAgentThinkingIndicator status={assistantStatus} variant="line" /> : null}
             </ScrollView>
           )}
         </View>
@@ -857,31 +833,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 13.5,
     lineHeight: 18,
-    letterSpacing: -0.25,
-  },
-  thinkingLine: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 18,
-    paddingLeft: 2,
-  },
-  thinkingText: {
-    color: '#8f9098',
-    fontSize: 14.5,
-    lineHeight: 20,
-    letterSpacing: -0.26,
-  },
-  thinkingDots: {
-    flexDirection: 'row',
-    gap: 4,
-    paddingTop: 2,
-  },
-  thinkingDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#8f9098',
+    fontWeight: '500',
+    letterSpacing: -0.2,
   },
 });
