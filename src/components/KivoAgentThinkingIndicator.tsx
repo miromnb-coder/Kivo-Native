@@ -60,60 +60,86 @@ function getStepIconName(status: KivoAgentStepStatus): keyof typeof Feather.glyp
 
 function KivoMorphingOrb({ status }: { status: KivoAgentThinkingStatus }) {
   const morph = useRef(new Animated.Value(0)).current;
-  const glow = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(0)).current;
   const shouldAnimate = status !== 'idle' && status !== 'done' && status !== 'error';
 
   useEffect(() => {
     if (!shouldAnimate) {
       morph.stopAnimation();
-      glow.stopAnimation();
-      morph.setValue(status === 'error' ? 0.64 : 0);
-      glow.setValue(0);
+      pulse.stopAnimation();
+      morph.setValue(status === 'error' ? 0.66 : 0);
+      pulse.setValue(0);
       return;
     }
 
     const morphLoop = Animated.loop(
       Animated.timing(morph, {
         toValue: 1,
-        duration: 1850,
+        duration: 1700,
         easing: Easing.inOut(Easing.cubic),
         useNativeDriver: false,
       }),
     );
 
-    const glowLoop = Animated.loop(
+    const pulseLoop = Animated.loop(
       Animated.sequence([
-        Animated.timing(glow, { toValue: 1, duration: 760, easing: Easing.out(Easing.quad), useNativeDriver: false }),
-        Animated.timing(glow, { toValue: 0, duration: 920, easing: Easing.in(Easing.quad), useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 720, easing: Easing.out(Easing.quad), useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 0, duration: 860, easing: Easing.in(Easing.quad), useNativeDriver: false }),
       ]),
     );
 
     morphLoop.start();
-    glowLoop.start();
+    pulseLoop.start();
 
     return () => {
       morphLoop.stop();
-      glowLoop.stop();
+      pulseLoop.stop();
     };
-  }, [glow, morph, shouldAnimate, status]);
+  }, [morph, pulse, shouldAnimate, status]);
 
   const rotate = morph.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-  const scale = morph.interpolate({ inputRange: [0, 0.22, 0.48, 0.73, 1], outputRange: [1, 1.12, 0.96, 1.08, 1] });
-  const scaleX = morph.interpolate({ inputRange: [0, 0.2, 0.5, 0.8, 1], outputRange: [1, 0.86, 1.12, 0.94, 1] });
-  const scaleY = morph.interpolate({ inputRange: [0, 0.24, 0.52, 0.78, 1], outputRange: [1, 1.14, 0.88, 1.08, 1] });
-  const radiusTopLeft = morph.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [11, 7, 13, 5, 11] });
-  const radiusTopRight = morph.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [11, 13, 6, 10, 11] });
-  const radiusBottomRight = morph.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [11, 6, 12, 14, 11] });
-  const radiusBottomLeft = morph.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [11, 12, 8, 6, 11] });
-  const glowOpacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0.28, 0.72] });
-  const glowScale = glow.interpolate({ inputRange: [0, 1], outputRange: [1, 1.42] });
+  const reverseRotate = morph.interpolate({ inputRange: [0, 1], outputRange: ['32deg', '-328deg'] });
+  const slowRotate = morph.interpolate({ inputRange: [0, 1], outputRange: ['-20deg', '190deg'] });
+  const scale = morph.interpolate({ inputRange: [0, 0.24, 0.5, 0.76, 1], outputRange: [1, 1.08, 0.96, 1.12, 1] });
+  const trailScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1.02, 1.22] });
+  const trailOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.28, 0.08] });
+  const glowScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.46] });
+  const glowOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.16, 0.34] });
 
-  const orbColor = status === 'error' ? '#ef4444' : status === 'done' ? '#111216' : '#2563eb';
-  const glowColor = status === 'error' ? 'rgba(239,68,68,0.22)' : 'rgba(37,99,235,0.24)';
+  const radiusTopLeft = morph.interpolate({ inputRange: [0, 0.2, 0.48, 0.72, 1], outputRange: [14, 7, 15, 8, 14] });
+  const radiusTopRight = morph.interpolate({ inputRange: [0, 0.2, 0.48, 0.72, 1], outputRange: [12, 15, 8, 14, 12] });
+  const radiusBottomRight = morph.interpolate({ inputRange: [0, 0.2, 0.48, 0.72, 1], outputRange: [14, 8, 15, 7, 14] });
+  const radiusBottomLeft = morph.interpolate({ inputRange: [0, 0.2, 0.48, 0.72, 1], outputRange: [8, 14, 7, 15, 8] });
+
+  const orbColor = status === 'error' ? '#ef4444' : status === 'done' ? '#111216' : '#1556ff';
+  const glowColor = status === 'error' ? 'rgba(239,68,68,0.18)' : 'rgba(21,86,255,0.18)';
+  const trailColor = status === 'error' ? 'rgba(239,68,68,0.16)' : 'rgba(21,86,255,0.16)';
 
   return (
     <View style={styles.orbWrap} accessibilityElementsHidden>
       <Animated.View style={[styles.orbGlow, { backgroundColor: glowColor, opacity: glowOpacity, transform: [{ scale: glowScale }] }]} />
+      <Animated.View
+        style={[
+          styles.orbTrail,
+          styles.orbTrailOne,
+          {
+            backgroundColor: trailColor,
+            opacity: trailOpacity,
+            transform: [{ rotate: reverseRotate }, { scale: trailScale }],
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.orbTrail,
+          styles.orbTrailTwo,
+          {
+            backgroundColor: trailColor,
+            opacity: trailOpacity,
+            transform: [{ rotate: slowRotate }, { scale: trailScale }],
+          },
+        ]}
+      />
       <Animated.View
         style={[
           styles.orb,
@@ -123,11 +149,11 @@ function KivoMorphingOrb({ status }: { status: KivoAgentThinkingStatus }) {
             borderTopRightRadius: radiusTopRight,
             borderBottomRightRadius: radiusBottomRight,
             borderBottomLeftRadius: radiusBottomLeft,
-            transform: [{ rotate }, { scale }, { scaleX }, { scaleY }],
+            transform: [{ rotate }, { scale }],
           },
         ]}
       />
-      <Animated.View style={[styles.orbHighlight, { opacity: shouldAnimate ? glowOpacity : 0.32 }]} />
+      <Animated.View style={[styles.orbCoreShade, { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.2, 0.06] }) }]} />
     </View>
   );
 }
@@ -220,13 +246,11 @@ export const KivoAgentThinkingIndicator = memo(KivoAgentThinkingIndicatorBase);
 const styles = StyleSheet.create({
   line: {
     alignSelf: 'flex-start',
-    maxWidth: '86%',
-    minHeight: 34,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 2,
-    marginTop: 2,
-    marginBottom: 14,
+    maxWidth: '88%',
+    minHeight: 46,
+    paddingHorizontal: 1,
+    marginTop: 0,
+    marginBottom: 9,
   },
   card: {
     alignSelf: 'flex-start',
@@ -247,47 +271,66 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
   },
   orbWrap: {
-    width: 24,
-    height: 24,
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
   },
   orbGlow: {
     position: 'absolute',
-    width: 20,
-    height: 20,
+    width: 26,
+    height: 26,
     borderRadius: 999,
   },
-  orb: {
-    width: 17,
-    height: 17,
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  orbHighlight: {
+  orbTrail: {
     position: 'absolute',
-    top: 7,
-    left: 8,
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.42)',
+    width: 24,
+    height: 24,
+    borderRadius: 9,
+  },
+  orbTrailOne: {
+    borderTopLeftRadius: 7,
+    borderTopRightRadius: 15,
+    borderBottomRightRadius: 9,
+    borderBottomLeftRadius: 14,
+  },
+  orbTrailTwo: {
+    width: 22,
+    height: 22,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 14,
+    borderBottomLeftRadius: 7,
+  },
+  orb: {
+    width: 20,
+    height: 20,
+    shadowColor: '#1556ff',
+    shadowOpacity: 0.22,
+    shadowRadius: 13,
+    shadowOffset: { width: 0, height: 5 },
+  },
+  orbCoreShade: {
+    position: 'absolute',
+    width: 11,
+    height: 11,
+    borderRadius: 7,
+    backgroundColor: 'rgba(255,255,255,0.36)',
+    transform: [{ translateX: -2 }, { translateY: -3 }],
   },
   copyBlock: {
     flex: 1,
     minWidth: 0,
   },
   lineTitle: {
-    color: '#737680',
-    fontSize: 19.5,
+    color: '#6d6f76',
+    fontSize: 24,
     fontWeight: '400',
-    letterSpacing: 0.8,
-    lineHeight: 25,
+    letterSpacing: 1.45,
+    lineHeight: 31,
   },
   cardTitle: {
     color: '#111216',
