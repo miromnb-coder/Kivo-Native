@@ -46,8 +46,91 @@ type TableBlock = {
   rows: string[][];
 };
 
+type ThinkingStatusStep = {
+  label: string;
+  detail: string;
+};
+
 function clamp(value: number, min = 0, max = 1) {
   return Math.min(max, Math.max(min, value));
+}
+
+function includesAny(value: string, keywords: string[]) {
+  return keywords.some((keyword) => value.includes(keyword));
+}
+
+function getLatestUserMessage(messages: ChatMessage[]) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index].role === 'user') return messages[index];
+  }
+
+  return null;
+}
+
+function buildThinkingStatusSteps(message: string, hasPhoto = false): ThinkingStatusStep[] {
+  const value = message.toLowerCase();
+
+  if (hasPhoto) {
+    return [
+      { label: 'Looking', detail: 'Reading the image context' },
+      { label: 'Understanding', detail: 'Connecting it with your request' },
+      { label: 'Writing', detail: 'Preparing a clear response' },
+    ];
+  }
+
+  if (includesAny(value, ['error', 'bug', 'virhe', 'crash', 'kaatuu', 'typescript', 'react', 'expo', 'build', 'npm', 'vercel', 'github', 'koodi', 'code', 'import', 'terminal'])) {
+    return [
+      { label: 'Reading', detail: 'Checking the problem details' },
+      { label: 'Debugging', detail: 'Looking for the safest fix' },
+      { label: 'Writing', detail: 'Explaining the next step clearly' },
+    ];
+  }
+
+  if (includesAny(value, ['suunnitellaan', 'suunnittele', 'design', 'ui', 'ux', 'näkymä', 'kuva', 'väri', 'layout', 'icon', 'logo'])) {
+    return [
+      { label: 'Exploring', detail: 'Scanning possible design directions' },
+      { label: 'Refining', detail: 'Choosing the cleanest option' },
+      { label: 'Writing', detail: 'Turning the idea into a plan' },
+    ];
+  }
+
+  if (includesAny(value, ['etsi', 'hae', 'uutinen', 'news', 'search', 'latest', 'uusin', 'löydä', 'google'])) {
+    return [
+      { label: 'Understanding', detail: 'Clarifying what to look for' },
+      { label: 'Planning', detail: 'Choosing the most useful angle' },
+      { label: 'Writing', detail: 'Preparing a focused answer' },
+    ];
+  }
+
+  if (includesAny(value, ['vertaa', 'compare', 'ero', 'paras', 'parempi', 'vaihtoehto', 'which'])) {
+    return [
+      { label: 'Comparing', detail: 'Separating the important differences' },
+      { label: 'Weighing', detail: 'Looking for the strongest option' },
+      { label: 'Writing', detail: 'Making the recommendation clear' },
+    ];
+  }
+
+  if (includesAny(value, ['tee', 'muuta', 'lisää', 'korjaa', 'vaihda', 'implement', 'build', 'create', 'update'])) {
+    return [
+      { label: 'Reviewing', detail: 'Checking what needs to change' },
+      { label: 'Planning', detail: 'Keeping the update small and safe' },
+      { label: 'Writing', detail: 'Preparing the exact change' },
+    ];
+  }
+
+  if (includesAny(value, ['miksi', 'mitä tarkoittaa', 'selitä', 'explain', 'what is', 'why', 'kuinka', 'miten'])) {
+    return [
+      { label: 'Understanding', detail: 'Finding the core question' },
+      { label: 'Reasoning', detail: 'Building a simple explanation' },
+      { label: 'Writing', detail: 'Making it easy to follow' },
+    ];
+  }
+
+  return [
+    { label: 'Thinking', detail: 'Understanding your request' },
+    { label: 'Planning', detail: 'Finding the best approach' },
+    { label: 'Writing', detail: 'Preparing your response' },
+  ];
 }
 
 function isTableLine(line: string) {
@@ -208,21 +291,24 @@ function KivoAssistantContent({ text }: { text: string }) {
   return <View style={styles.assistantContent}>{blocks}</View>;
 }
 
-function KivoThinkingLine() {
-  const fade = useRef(new Animated.Value(0.56)).current;
+function KivoThinkingLine({ prompt, hasPhoto = false }: { prompt?: string; hasPhoto?: boolean }) {
+  const fade = useRef(new Animated.Value(0.64)).current;
+  const [stepIndex, setStepIndex] = useState(0);
+  const statusSteps = useMemo(() => buildThinkingStatusSteps(prompt ?? '', hasPhoto), [hasPhoto, prompt]);
+  const activeStep = statusSteps[Math.min(stepIndex, statusSteps.length - 1)] ?? statusSteps[0];
 
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(fade, {
-          toValue: 0.86,
-          duration: 1200,
+          toValue: 0.92,
+          duration: 1150,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(fade, {
-          toValue: 0.56,
-          duration: 1200,
+          toValue: 0.64,
+          duration: 1150,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
@@ -234,13 +320,28 @@ function KivoThinkingLine() {
     return () => loop.stop();
   }, [fade]);
 
+  useEffect(() => {
+    setStepIndex(0);
+
+    if (statusSteps.length <= 1) return undefined;
+
+    const timer = setInterval(() => {
+      setStepIndex((current) => Math.min(current + 1, statusSteps.length - 1));
+    }, 1450);
+
+    return () => clearInterval(timer);
+  }, [statusSteps]);
+
   return (
     <View style={styles.thinkingLine}>
       <View style={styles.thinkingOrbWrap}>
         <LottieView autoPlay loop speed={0.72} source={kivoThinkingOrb} style={styles.thinkingOrb} />
       </View>
 
-      <Animated.Text style={[styles.thinkingText, { opacity: fade }]}>Thinking</Animated.Text>
+      <Animated.View style={[styles.thinkingCopy, { opacity: fade }]}> 
+        <Text style={styles.thinkingText}>{activeStep.label}</Text>
+        <Text style={styles.thinkingSubtext}>{activeStep.detail}</Text>
+      </Animated.View>
     </View>
   );
 }
@@ -570,6 +671,8 @@ export function KivoChatScreenStreaming() {
     refreshConversations();
   }
 
+  const latestUserMessage = getLatestUserMessage(messages);
+
   const screenPanResponder = useMemo(
     () => PanResponder.create({
       onStartShouldSetPanResponder: () => false,
@@ -681,7 +784,7 @@ export function KivoChatScreenStreaming() {
                   </View>
                 )
               ))}
-              {assistantThinking ? <KivoThinkingLine /> : null}
+              {assistantThinking ? <KivoThinkingLine prompt={latestUserMessage?.text} hasPhoto={Boolean(latestUserMessage?.photo)} /> : null}
             </ScrollView>
           )}
         </View>
@@ -867,7 +970,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 42,
+    minHeight: 48,
     marginTop: 1,
     marginBottom: 18,
     paddingLeft: 1,
@@ -883,11 +986,23 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
   },
+  thinkingCopy: {
+    minHeight: 38,
+    justifyContent: 'center',
+  },
   thinkingText: {
-    color: '#6f7077',
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: '300',
-    letterSpacing: 1.15,
+    color: '#5f6066',
+    fontSize: 15.5,
+    lineHeight: 19,
+    fontWeight: '500',
+    letterSpacing: -0.18,
+  },
+  thinkingSubtext: {
+    marginTop: 2,
+    color: '#9a9ba3',
+    fontSize: 12.5,
+    lineHeight: 16,
+    fontWeight: '400',
+    letterSpacing: -0.12,
   },
 });
