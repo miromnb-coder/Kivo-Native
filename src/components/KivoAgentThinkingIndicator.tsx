@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import LottieView from 'lottie-react-native';
 import { memo, useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { colors } from '../theme/colors';
@@ -51,6 +52,100 @@ const statusCopy: Record<KivoAgentThinkingStatus, { label: string; detail?: stri
   error: { label: 'Something went wrong', detail: 'Try again in a moment' },
 };
 
+const kivoThinkingOrbAnimation = {
+  v: '5.7.4',
+  fr: 60,
+  ip: 0,
+  op: 120,
+  w: 64,
+  h: 64,
+  nm: 'Kivo Thinking Orb',
+  ddd: 0,
+  assets: [],
+  layers: [
+    {
+      ddd: 0,
+      ind: 1,
+      ty: 4,
+      nm: 'soft halo',
+      sr: 1,
+      ks: {
+        o: { a: 1, k: [{ t: 0, s: [20] }, { t: 58, s: [44] }, { t: 120, s: [20] }] },
+        r: { a: 1, k: [{ t: 0, s: [0] }, { t: 120, s: [360] }] },
+        p: { a: 0, k: [32, 32, 0] },
+        a: { a: 0, k: [0, 0, 0] },
+        s: { a: 1, k: [{ t: 0, s: [92, 92, 100] }, { t: 58, s: [126, 126, 100] }, { t: 120, s: [92, 92, 100] }] },
+      },
+      shapes: [
+        { ty: 'gr', it: [
+          { ty: 'el', p: { a: 0, k: [0, 0] }, s: { a: 0, k: [34, 34] } },
+          { ty: 'fl', c: { a: 0, k: [0.08, 0.34, 1, 1] }, o: { a: 0, k: 22 }, r: 1 },
+          { ty: 'tr', p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } },
+        ] },
+      ],
+      ip: 0,
+      op: 120,
+      st: 0,
+      bm: 0,
+    },
+    {
+      ddd: 0,
+      ind: 2,
+      ty: 4,
+      nm: 'morphing orb',
+      sr: 1,
+      ks: {
+        o: { a: 0, k: 100 },
+        r: { a: 1, k: [{ t: 0, s: [-18] }, { t: 120, s: [342] }] },
+        p: { a: 0, k: [32, 32, 0] },
+        a: { a: 0, k: [0, 0, 0] },
+        s: { a: 1, k: [{ t: 0, s: [100, 100, 100] }, { t: 38, s: [114, 94, 100] }, { t: 78, s: [94, 112, 100] }, { t: 120, s: [100, 100, 100] }] },
+      },
+      shapes: [
+        { ty: 'gr', it: [
+          { ind: 0, ty: 'sh', ks: { a: 1, k: [
+            { t: 0, s: [{ i: [[7, -7], [7, 7], [-7, 7], [-7, -7]], o: [[7, 7], [-7, 7], [-7, -7], [7, -7]], v: [[0, -13], [13, 0], [0, 13], [-13, 0]], c: true }] },
+            { t: 40, s: [{ i: [[9, -5], [4, 9], [-9, 4], [-4, -9]], o: [[5, 9], [-9, 4], [-4, -9], [9, -5]], v: [[1, -14], [14, 1], [-1, 12], [-13, -1]], c: true }] },
+            { t: 80, s: [{ i: [[5, -9], [9, 4], [-5, 9], [-9, -4]], o: [[9, 4], [-5, 9], [-9, -4], [5, -9]], v: [[-1, -12], [13, -1], [1, 14], [-14, 1]], c: true }] },
+            { t: 120, s: [{ i: [[7, -7], [7, 7], [-7, 7], [-7, -7]], o: [[7, 7], [-7, 7], [-7, -7], [7, -7]], v: [[0, -13], [13, 0], [0, 13], [-13, 0]], c: true }] },
+          ] }, nm: 'shape' },
+          { ty: 'fl', c: { a: 0, k: [0.08, 0.34, 1, 1] }, o: { a: 0, k: 96 }, r: 1 },
+          { ty: 'tr', p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } },
+        ] },
+      ],
+      ip: 0,
+      op: 120,
+      st: 0,
+      bm: 0,
+    },
+    {
+      ddd: 0,
+      ind: 3,
+      ty: 4,
+      nm: 'deep center',
+      sr: 1,
+      ks: {
+        o: { a: 1, k: [{ t: 0, s: [40] }, { t: 60, s: [68] }, { t: 120, s: [40] }] },
+        r: { a: 1, k: [{ t: 0, s: [22] }, { t: 120, s: [382] }] },
+        p: { a: 0, k: [32, 32, 0] },
+        a: { a: 0, k: [0, 0, 0] },
+        s: { a: 1, k: [{ t: 0, s: [70, 70, 100] }, { t: 60, s: [86, 82, 100] }, { t: 120, s: [70, 70, 100] }] },
+      },
+      shapes: [
+        { ty: 'gr', it: [
+          { ty: 'el', p: { a: 0, k: [0, 0] }, s: { a: 0, k: [17, 17] } },
+          { ty: 'fl', c: { a: 0, k: [0.03, 0.22, 0.96, 1] }, o: { a: 0, k: 72 }, r: 1 },
+          { ty: 'tr', p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } },
+        ] },
+      ],
+      ip: 0,
+      op: 120,
+      st: 0,
+      bm: 0,
+    },
+  ],
+};
+
 function getStepIconName(status: KivoAgentStepStatus): keyof typeof Feather.glyphMap {
   if (status === 'done') return 'check';
   if (status === 'error') return 'x';
@@ -58,103 +153,82 @@ function getStepIconName(status: KivoAgentStepStatus): keyof typeof Feather.glyp
   return 'circle';
 }
 
-function KivoMorphingOrb({ status }: { status: KivoAgentThinkingStatus }) {
-  const morph = useRef(new Animated.Value(0)).current;
-  const pulse = useRef(new Animated.Value(0)).current;
-  const shouldAnimate = status !== 'idle' && status !== 'done' && status !== 'error';
-
-  useEffect(() => {
-    if (!shouldAnimate) {
-      morph.stopAnimation();
-      pulse.stopAnimation();
-      morph.setValue(status === 'error' ? 0.66 : 0);
-      pulse.setValue(0);
-      return;
-    }
-
-    const morphLoop = Animated.loop(
-      Animated.timing(morph, {
-        toValue: 1,
-        duration: 1700,
-        easing: Easing.inOut(Easing.cubic),
-        useNativeDriver: false,
-      }),
+function KivoThinkingOrb({ status }: { status: KivoAgentThinkingStatus }) {
+  if (status === 'error') {
+    return (
+      <View style={[styles.fallbackOrb, styles.errorOrb]}>
+        <Feather name="x" size={14} color="#fff" strokeWidth={2.6} />
+      </View>
     );
-
-    const pulseLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 720, easing: Easing.out(Easing.quad), useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0, duration: 860, easing: Easing.in(Easing.quad), useNativeDriver: false }),
-      ]),
-    );
-
-    morphLoop.start();
-    pulseLoop.start();
-
-    return () => {
-      morphLoop.stop();
-      pulseLoop.stop();
-    };
-  }, [morph, pulse, shouldAnimate, status]);
-
-  const rotate = morph.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-  const reverseRotate = morph.interpolate({ inputRange: [0, 1], outputRange: ['32deg', '-328deg'] });
-  const slowRotate = morph.interpolate({ inputRange: [0, 1], outputRange: ['-20deg', '190deg'] });
-  const scale = morph.interpolate({ inputRange: [0, 0.24, 0.5, 0.76, 1], outputRange: [1, 1.08, 0.96, 1.12, 1] });
-  const trailScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1.02, 1.22] });
-  const trailOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.28, 0.08] });
-  const glowScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.46] });
-  const glowOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.16, 0.34] });
-
-  const radiusTopLeft = morph.interpolate({ inputRange: [0, 0.2, 0.48, 0.72, 1], outputRange: [14, 7, 15, 8, 14] });
-  const radiusTopRight = morph.interpolate({ inputRange: [0, 0.2, 0.48, 0.72, 1], outputRange: [12, 15, 8, 14, 12] });
-  const radiusBottomRight = morph.interpolate({ inputRange: [0, 0.2, 0.48, 0.72, 1], outputRange: [14, 8, 15, 7, 14] });
-  const radiusBottomLeft = morph.interpolate({ inputRange: [0, 0.2, 0.48, 0.72, 1], outputRange: [8, 14, 7, 15, 8] });
-
-  const orbColor = status === 'error' ? '#ef4444' : status === 'done' ? '#111216' : '#1556ff';
-  const glowColor = status === 'error' ? 'rgba(239,68,68,0.18)' : 'rgba(21,86,255,0.18)';
-  const trailColor = status === 'error' ? 'rgba(239,68,68,0.16)' : 'rgba(21,86,255,0.16)';
+  }
 
   return (
     <View style={styles.orbWrap} accessibilityElementsHidden>
-      <Animated.View style={[styles.orbGlow, { backgroundColor: glowColor, opacity: glowOpacity, transform: [{ scale: glowScale }] }]} />
-      <Animated.View
-        style={[
-          styles.orbTrail,
-          styles.orbTrailOne,
-          {
-            backgroundColor: trailColor,
-            opacity: trailOpacity,
-            transform: [{ rotate: reverseRotate }, { scale: trailScale }],
-          },
-        ]}
+      <LottieView
+        autoPlay
+        loop
+        speed={0.88}
+        source={kivoThinkingOrbAnimation as object}
+        style={styles.lottieOrb}
       />
-      <Animated.View
-        style={[
-          styles.orbTrail,
-          styles.orbTrailTwo,
-          {
-            backgroundColor: trailColor,
-            opacity: trailOpacity,
-            transform: [{ rotate: slowRotate }, { scale: trailScale }],
-          },
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.orb,
-          {
-            backgroundColor: orbColor,
-            borderTopLeftRadius: radiusTopLeft,
-            borderTopRightRadius: radiusTopRight,
-            borderBottomRightRadius: radiusBottomRight,
-            borderBottomLeftRadius: radiusBottomLeft,
-            transform: [{ rotate }, { scale }],
-          },
-        ]}
-      />
-      <Animated.View style={[styles.orbCoreShade, { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.2, 0.06] }) }]} />
     </View>
+  );
+}
+
+function KivoStatusText({ title, isCard }: { title: string; isCard: boolean }) {
+  const shimmer = useRef(new Animated.Value(0)).current;
+  const fade = useRef(new Animated.Value(1)).current;
+  const previousTitleRef = useRef(title);
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmer, {
+          toValue: 1,
+          duration: 1450,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.delay(260),
+        Animated.timing(shimmer, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    loop.start();
+    return () => loop.stop();
+  }, [shimmer]);
+
+  useEffect(() => {
+    if (previousTitleRef.current === title) return;
+    previousTitleRef.current = title;
+    fade.setValue(0.25);
+    Animated.timing(fade, {
+      toValue: 1,
+      duration: 220,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [fade, title]);
+
+  const shimmerTranslateX = shimmer.interpolate({ inputRange: [0, 1], outputRange: [-70, 170] });
+
+  return (
+    <Animated.View style={[styles.statusTextWrap, { opacity: fade }]}>
+      <Text numberOfLines={1} style={isCard ? styles.cardTitle : styles.lineTitle}>{title}</Text>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.textLightSweep,
+          {
+            transform: [{ translateX: shimmerTranslateX }, { rotate: '16deg' }],
+          },
+        ]}
+      />
+    </Animated.View>
   );
 }
 
@@ -220,14 +294,14 @@ function KivoAgentThinkingIndicatorBase({
     return `Kivo status: ${title}`;
   }, [subtitle, title]);
 
-  if (!visible || status === 'idle') return null;
+  if (!visible || status === 'idle' || status === 'done') return null;
 
   return (
     <View accessibilityRole="text" accessibilityLabel={accessibilityLabel} style={[isCard ? styles.card : styles.line, style]}>
       <View style={styles.headerRow}>
-        <KivoMorphingOrb status={status} />
+        <KivoThinkingOrb status={status} />
         <View style={styles.copyBlock}>
-          <Text numberOfLines={1} style={isCard ? styles.cardTitle : styles.lineTitle}>{title}</Text>
+          <KivoStatusText title={title} isCard={isCard} />
           {isCard && subtitle ? <Text numberOfLines={1} style={styles.cardSubtitle}>{subtitle}</Text> : null}
         </View>
       </View>
@@ -247,10 +321,10 @@ const styles = StyleSheet.create({
   line: {
     alignSelf: 'flex-start',
     maxWidth: '88%',
-    minHeight: 46,
+    minHeight: 50,
     paddingHorizontal: 1,
     marginTop: 0,
-    marginBottom: 9,
+    marginBottom: 10,
   },
   card: {
     alignSelf: 'flex-start',
@@ -271,66 +345,52 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 16,
   },
   orbWrap: {
-    width: 38,
-    height: 38,
+    width: 43,
+    height: 43,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -1,
+  },
+  lottieOrb: {
+    width: 54,
+    height: 54,
+  },
+  fallbackOrb: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  orbGlow: {
-    position: 'absolute',
-    width: 26,
-    height: 26,
-    borderRadius: 999,
-  },
-  orbTrail: {
-    position: 'absolute',
-    width: 24,
-    height: 24,
-    borderRadius: 9,
-  },
-  orbTrailOne: {
-    borderTopLeftRadius: 7,
-    borderTopRightRadius: 15,
-    borderBottomRightRadius: 9,
-    borderBottomLeftRadius: 14,
-  },
-  orbTrailTwo: {
-    width: 22,
-    height: 22,
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 14,
-    borderBottomLeftRadius: 7,
-  },
-  orb: {
-    width: 20,
-    height: 20,
-    shadowColor: '#1556ff',
-    shadowOpacity: 0.22,
-    shadowRadius: 13,
-    shadowOffset: { width: 0, height: 5 },
-  },
-  orbCoreShade: {
-    position: 'absolute',
-    width: 11,
-    height: 11,
-    borderRadius: 7,
-    backgroundColor: 'rgba(255,255,255,0.36)',
-    transform: [{ translateX: -2 }, { translateY: -3 }],
+  errorOrb: {
+    backgroundColor: '#ef4444',
   },
   copyBlock: {
     flex: 1,
     minWidth: 0,
   },
+  statusTextWrap: {
+    alignSelf: 'flex-start',
+    minWidth: 158,
+    overflow: 'hidden',
+  },
+  textLightSweep: {
+    position: 'absolute',
+    top: -6,
+    bottom: -6,
+    width: 34,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    opacity: 0.5,
+  },
   lineTitle: {
     color: '#6d6f76',
-    fontSize: 24,
+    fontSize: 25.5,
     fontWeight: '400',
-    letterSpacing: 1.45,
-    lineHeight: 31,
+    letterSpacing: 1.55,
+    lineHeight: 33,
   },
   cardTitle: {
     color: '#111216',
