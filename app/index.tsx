@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, StyleSheet, View } from 'react-native';
 import * as ExpoLinking from 'expo-linking';
-import { KivoChatScreenStreaming } from '@/components/KivoChatScreenStreamingAgent';
+import { KivoChatScreenStreaming } from '@/components/KivoChatScreenStreaming';
 import { subscribeKivoSignOut } from '@/lib/kivo-auth-events';
 import { getKivoSession, supabase } from '@/lib/supabase';
 import { KivoAuthScreen, type KivoAuthMethod } from '@/screens/auth/KivoAuthScreen';
