@@ -54,20 +54,20 @@ const statusCopy: Record<KivoAgentThinkingStatus, { label: string; detail?: stri
   checking_library: { label: 'Searching library', detail: 'Looking through saved items' },
   planning: { label: 'Planning', detail: 'Choosing the next best step' },
   using_tools: { label: 'Using tools', detail: 'Running the selected action' },
-  writing: { label: 'Writing', detail: 'Composing the answer' },
-  responding: { label: 'Writing', detail: 'Composing the answer' },
+  writing: { label: 'Thinking', detail: 'Composing the answer' },
+  responding: { label: 'Thinking', detail: 'Composing the answer' },
   done: { label: 'Ready' },
   error: { label: 'Something went wrong', detail: 'Try again in a moment' },
 };
 
-const KIVO_THINKING_ORB_ANIMATION = {
+const KIVO_REFERENCE_THINKING_ORB_ANIMATION = {
   v: '5.7.4',
   fr: 60,
   ip: 0,
-  op: 132,
-  w: 72,
-  h: 72,
-  nm: 'Kivo soft thinking orb',
+  op: 150,
+  w: 64,
+  h: 64,
+  nm: 'Kivo reference thinking orb',
   ddd: 0,
   assets: [],
   layers: [
@@ -75,36 +75,14 @@ const KIVO_THINKING_ORB_ANIMATION = {
       ddd: 0,
       ind: 1,
       ty: 4,
-      nm: 'soft outer haze',
+      nm: 'very soft blue haze',
       sr: 1,
       ks: {
-        o: {
-          a: 1,
-          k: [
-            { t: 0, s: [18] },
-            { t: 44, s: [34] },
-            { t: 88, s: [25] },
-            { t: 132, s: [18] },
-          ],
-        },
-        r: {
-          a: 1,
-          k: [
-            { t: 0, s: [-12] },
-            { t: 132, s: [348] },
-          ],
-        },
-        p: { a: 0, k: [36, 36, 0] },
+        o: { a: 1, k: [{ t: 0, s: [14] }, { t: 75, s: [27] }, { t: 150, s: [14] }] },
+        r: { a: 1, k: [{ t: 0, s: [-8] }, { t: 150, s: [352] }] },
+        p: { a: 0, k: [32, 32, 0] },
         a: { a: 0, k: [0, 0, 0] },
-        s: {
-          a: 1,
-          k: [
-            { t: 0, s: [96, 96, 100] },
-            { t: 44, s: [132, 126, 100] },
-            { t: 88, s: [118, 136, 100] },
-            { t: 132, s: [96, 96, 100] },
-          ],
-        },
+        s: { a: 1, k: [{ t: 0, s: [92, 92, 100] }, { t: 75, s: [132, 124, 100] }, { t: 150, s: [92, 92, 100] }] },
       },
       shapes: [
         {
@@ -116,72 +94,19 @@ const KIVO_THINKING_ORB_ANIMATION = {
               ks: {
                 a: 1,
                 k: [
-                  {
-                    t: 0,
-                    s: [
-                      {
-                        i: [[10, -10], [10, 10], [-10, 10], [-10, -10]],
-                        o: [[10, 10], [-10, 10], [-10, -10], [10, -10]],
-                        v: [[0, -18], [18, 0], [0, 18], [-18, 0]],
-                        c: true,
-                      },
-                    ],
-                  },
-                  {
-                    t: 44,
-                    s: [
-                      {
-                        i: [[13, -7], [7, 12], [-12, 7], [-7, -13]],
-                        o: [[7, 13], [-12, 7], [-7, -13], [13, -7]],
-                        v: [[2, -19], [20, 2], [-2, 17], [-18, -1]],
-                        c: true,
-                      },
-                    ],
-                  },
-                  {
-                    t: 88,
-                    s: [
-                      {
-                        i: [[7, -13], [13, 7], [-7, 13], [-13, -7]],
-                        o: [[13, 7], [-7, 13], [-13, -7], [7, -13]],
-                        v: [[-1, -17], [18, -2], [1, 20], [-20, 1]],
-                        c: true,
-                      },
-                    ],
-                  },
-                  {
-                    t: 132,
-                    s: [
-                      {
-                        i: [[10, -10], [10, 10], [-10, 10], [-10, -10]],
-                        o: [[10, 10], [-10, 10], [-10, -10], [10, -10]],
-                        v: [[0, -18], [18, 0], [0, 18], [-18, 0]],
-                        c: true,
-                      },
-                    ],
-                  },
+                  { t: 0, s: [{ i: [[12, -12], [12, 12], [-12, 12], [-12, -12]], o: [[12, 12], [-12, 12], [-12, -12], [12, -12]], v: [[0, -18], [18, 0], [0, 18], [-18, 0]], c: true }] },
+                  { t: 75, s: [{ i: [[14, -8], [8, 14], [-14, 8], [-8, -14]], o: [[8, 14], [-14, 8], [-8, -14], [14, -8]], v: [[1, -19], [19, 1], [-1, 18], [-18, -1]], c: true }] },
+                  { t: 150, s: [{ i: [[12, -12], [12, 12], [-12, 12], [-12, -12]], o: [[12, 12], [-12, 12], [-12, -12], [12, -12]], v: [[0, -18], [18, 0], [0, 18], [-18, 0]], c: true }] },
                 ],
               },
             },
-            {
-              ty: 'fl',
-              c: { a: 0, k: [0.08, 0.32, 1, 1] },
-              o: { a: 0, k: 22 },
-              r: 1,
-            },
-            {
-              ty: 'tr',
-              p: { a: 0, k: [0, 0] },
-              a: { a: 0, k: [0, 0] },
-              s: { a: 0, k: [100, 100] },
-              r: { a: 0, k: 0 },
-              o: { a: 0, k: 100 },
-            },
+            { ty: 'fl', c: { a: 0, k: [0.08, 0.3, 1, 1] }, o: { a: 0, k: 24 }, r: 1 },
+            { ty: 'tr', p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } },
           ],
         },
       ],
       ip: 0,
-      op: 132,
+      op: 150,
       st: 0,
       bm: 0,
     },
@@ -189,34 +114,14 @@ const KIVO_THINKING_ORB_ANIMATION = {
       ddd: 0,
       ind: 2,
       ty: 4,
-      nm: 'transparent blue trail',
+      nm: 'misty diamond trail',
       sr: 1,
       ks: {
-        o: {
-          a: 1,
-          k: [
-            { t: 0, s: [20] },
-            { t: 66, s: [32] },
-            { t: 132, s: [20] },
-          ],
-        },
-        r: {
-          a: 1,
-          k: [
-            { t: 0, s: [28] },
-            { t: 132, s: [-332] },
-          ],
-        },
-        p: { a: 0, k: [36, 36, 0] },
+        o: { a: 1, k: [{ t: 0, s: [22] }, { t: 58, s: [34] }, { t: 150, s: [22] }] },
+        r: { a: 1, k: [{ t: 0, s: [22] }, { t: 150, s: [-338] }] },
+        p: { a: 0, k: [32, 32, 0] },
         a: { a: 0, k: [0, 0, 0] },
-        s: {
-          a: 1,
-          k: [
-            { t: 0, s: [102, 96, 100] },
-            { t: 66, s: [120, 108, 100] },
-            { t: 132, s: [102, 96, 100] },
-          ],
-        },
+        s: { a: 1, k: [{ t: 0, s: [98, 92, 100] }, { t: 58, s: [116, 108, 100] }, { t: 150, s: [98, 92, 100] }] },
       },
       shapes: [
         {
@@ -228,61 +133,19 @@ const KIVO_THINKING_ORB_ANIMATION = {
               ks: {
                 a: 1,
                 k: [
-                  {
-                    t: 0,
-                    s: [
-                      {
-                        i: [[9, -7], [9, 8], [-8, 9], [-9, -8]],
-                        o: [[9, 8], [-8, 9], [-9, -8], [9, -7]],
-                        v: [[1, -16], [17, 1], [-1, 16], [-16, -1]],
-                        c: true,
-                      },
-                    ],
-                  },
-                  {
-                    t: 66,
-                    s: [
-                      {
-                        i: [[5, -11], [11, 5], [-5, 11], [-11, -5]],
-                        o: [[11, 5], [-5, 11], [-11, -5], [5, -11]],
-                        v: [[-1, -15], [16, -2], [1, 18], [-18, 1]],
-                        c: true,
-                      },
-                    ],
-                  },
-                  {
-                    t: 132,
-                    s: [
-                      {
-                        i: [[9, -7], [9, 8], [-8, 9], [-9, -8]],
-                        o: [[9, 8], [-8, 9], [-9, -8], [9, -7]],
-                        v: [[1, -16], [17, 1], [-1, 16], [-16, -1]],
-                        c: true,
-                      },
-                    ],
-                  },
+                  { t: 0, s: [{ i: [[8, -9], [9, 8], [-8, 9], [-9, -8]], o: [[9, 8], [-8, 9], [-9, -8], [8, -9]], v: [[0, -15], [15, 0], [0, 15], [-15, 0]], c: true }] },
+                  { t: 58, s: [{ i: [[6, -11], [11, 6], [-6, 11], [-11, -6]], o: [[11, 6], [-6, 11], [-11, -6], [6, -11]], v: [[-1, -15], [16, -1], [1, 16], [-16, 1]], c: true }] },
+                  { t: 150, s: [{ i: [[8, -9], [9, 8], [-8, 9], [-9, -8]], o: [[9, 8], [-8, 9], [-9, -8], [8, -9]], v: [[0, -15], [15, 0], [0, 15], [-15, 0]], c: true }] },
                 ],
               },
             },
-            {
-              ty: 'fl',
-              c: { a: 0, k: [0.13, 0.4, 1, 1] },
-              o: { a: 0, k: 24 },
-              r: 1,
-            },
-            {
-              ty: 'tr',
-              p: { a: 0, k: [0, 0] },
-              a: { a: 0, k: [0, 0] },
-              s: { a: 0, k: [100, 100] },
-              r: { a: 0, k: 0 },
-              o: { a: 0, k: 100 },
-            },
+            { ty: 'fl', c: { a: 0, k: [0.12, 0.39, 1, 1] }, o: { a: 0, k: 28 }, r: 1 },
+            { ty: 'tr', p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } },
           ],
         },
       ],
       ip: 0,
-      op: 132,
+      op: 150,
       st: 0,
       bm: 0,
     },
@@ -290,29 +153,14 @@ const KIVO_THINKING_ORB_ANIMATION = {
       ddd: 0,
       ind: 3,
       ty: 4,
-      nm: 'main morphing blue core',
+      nm: 'small blue thinking core',
       sr: 1,
       ks: {
-        o: { a: 0, k: 98 },
-        r: {
-          a: 1,
-          k: [
-            { t: 0, s: [-18] },
-            { t: 132, s: [342] },
-          ],
-        },
-        p: { a: 0, k: [36, 36, 0] },
+        o: { a: 0, k: 96 },
+        r: { a: 1, k: [{ t: 0, s: [-16] }, { t: 150, s: [344] }] },
+        p: { a: 0, k: [32, 32, 0] },
         a: { a: 0, k: [0, 0, 0] },
-        s: {
-          a: 1,
-          k: [
-            { t: 0, s: [100, 100, 100] },
-            { t: 33, s: [112, 94, 100] },
-            { t: 66, s: [96, 112, 100] },
-            { t: 99, s: [108, 98, 100] },
-            { t: 132, s: [100, 100, 100] },
-          ],
-        },
+        s: { a: 1, k: [{ t: 0, s: [94, 94, 100] }, { t: 50, s: [106, 92, 100] }, { t: 100, s: [92, 106, 100] }, { t: 150, s: [94, 94, 100] }] },
       },
       shapes: [
         {
@@ -324,83 +172,20 @@ const KIVO_THINKING_ORB_ANIMATION = {
               ks: {
                 a: 1,
                 k: [
-                  {
-                    t: 0,
-                    s: [
-                      {
-                        i: [[8, -8], [8, 8], [-8, 8], [-8, -8]],
-                        o: [[8, 8], [-8, 8], [-8, -8], [8, -8]],
-                        v: [[0, -14], [14, 0], [0, 14], [-14, 0]],
-                        c: true,
-                      },
-                    ],
-                  },
-                  {
-                    t: 33,
-                    s: [
-                      {
-                        i: [[10, -5], [5, 10], [-10, 5], [-5, -10]],
-                        o: [[6, 10], [-10, 5], [-5, -10], [10, -5]],
-                        v: [[1, -15], [15, 1], [-1, 13], [-14, -1]],
-                        c: true,
-                      },
-                    ],
-                  },
-                  {
-                    t: 66,
-                    s: [
-                      {
-                        i: [[5, -10], [10, 5], [-5, 10], [-10, -5]],
-                        o: [[10, 5], [-5, 10], [-10, -5], [5, -10]],
-                        v: [[-1, -13], [14, -1], [1, 15], [-15, 1]],
-                        c: true,
-                      },
-                    ],
-                  },
-                  {
-                    t: 99,
-                    s: [
-                      {
-                        i: [[9, -6], [6, 9], [-9, 6], [-6, -9]],
-                        o: [[6, 9], [-9, 6], [-6, -9], [9, -6]],
-                        v: [[0, -15], [15, 0], [0, 13], [-13, 0]],
-                        c: true,
-                      },
-                    ],
-                  },
-                  {
-                    t: 132,
-                    s: [
-                      {
-                        i: [[8, -8], [8, 8], [-8, 8], [-8, -8]],
-                        o: [[8, 8], [-8, 8], [-8, -8], [8, -8]],
-                        v: [[0, -14], [14, 0], [0, 14], [-14, 0]],
-                        c: true,
-                      },
-                    ],
-                  },
+                  { t: 0, s: [{ i: [[8, -8], [8, 8], [-8, 8], [-8, -8]], o: [[8, 8], [-8, 8], [-8, -8], [8, -8]], v: [[0, -13], [13, 0], [0, 13], [-13, 0]], c: true }] },
+                  { t: 50, s: [{ i: [[10, -5], [5, 10], [-10, 5], [-5, -10]], o: [[5, 10], [-10, 5], [-5, -10], [10, -5]], v: [[1, -14], [14, 1], [-1, 12], [-13, -1]], c: true }] },
+                  { t: 100, s: [{ i: [[5, -10], [10, 5], [-5, 10], [-10, -5]], o: [[10, 5], [-5, 10], [-10, -5], [5, -10]], v: [[-1, -12], [13, -1], [1, 14], [-14, 1]], c: true }] },
+                  { t: 150, s: [{ i: [[8, -8], [8, 8], [-8, 8], [-8, -8]], o: [[8, 8], [-8, 8], [-8, -8], [8, -8]], v: [[0, -13], [13, 0], [0, 13], [-13, 0]], c: true }] },
                 ],
               },
             },
-            {
-              ty: 'fl',
-              c: { a: 0, k: [0.08, 0.34, 1, 1] },
-              o: { a: 0, k: 96 },
-              r: 1,
-            },
-            {
-              ty: 'tr',
-              p: { a: 0, k: [0, 0] },
-              a: { a: 0, k: [0, 0] },
-              s: { a: 0, k: [100, 100] },
-              r: { a: 0, k: 0 },
-              o: { a: 0, k: 100 },
-            },
+            { ty: 'fl', c: { a: 0, k: [0.07, 0.29, 1, 1] }, o: { a: 0, k: 98 }, r: 1 },
+            { ty: 'tr', p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } },
           ],
         },
       ],
       ip: 0,
-      op: 132,
+      op: 150,
       st: 0,
       bm: 0,
     },
@@ -408,63 +193,27 @@ const KIVO_THINKING_ORB_ANIMATION = {
       ddd: 0,
       ind: 4,
       ty: 4,
-      nm: 'deep blue center',
+      nm: 'deep center glow',
       sr: 1,
       ks: {
-        o: {
-          a: 1,
-          k: [
-            { t: 0, s: [52] },
-            { t: 66, s: [82] },
-            { t: 132, s: [52] },
-          ],
-        },
-        r: {
-          a: 1,
-          k: [
-            { t: 0, s: [12] },
-            { t: 132, s: [372] },
-          ],
-        },
-        p: { a: 0, k: [36, 36, 0] },
+        o: { a: 1, k: [{ t: 0, s: [44] }, { t: 75, s: [70] }, { t: 150, s: [44] }] },
+        r: { a: 1, k: [{ t: 0, s: [16] }, { t: 150, s: [376] }] },
+        p: { a: 0, k: [32, 32, 0] },
         a: { a: 0, k: [0, 0, 0] },
-        s: {
-          a: 1,
-          k: [
-            { t: 0, s: [68, 68, 100] },
-            { t: 66, s: [86, 82, 100] },
-            { t: 132, s: [68, 68, 100] },
-          ],
-        },
+        s: { a: 1, k: [{ t: 0, s: [68, 68, 100] }, { t: 75, s: [84, 80, 100] }, { t: 150, s: [68, 68, 100] }] },
       },
       shapes: [
         {
           ty: 'gr',
           it: [
-            {
-              ty: 'el',
-              p: { a: 0, k: [0, 0] },
-              s: { a: 0, k: [18, 18] },
-            },
-            {
-              ty: 'fl',
-              c: { a: 0, k: [0.03, 0.2, 0.95, 1] },
-              o: { a: 0, k: 76 },
-              r: 1,
-            },
-            {
-              ty: 'tr',
-              p: { a: 0, k: [0, 0] },
-              a: { a: 0, k: [0, 0] },
-              s: { a: 0, k: [100, 100] },
-              r: { a: 0, k: 0 },
-              o: { a: 0, k: 100 },
-            },
+            { ty: 'el', p: { a: 0, k: [0, 0] }, s: { a: 0, k: [17, 17] } },
+            { ty: 'fl', c: { a: 0, k: [0.02, 0.16, 0.92, 1] }, o: { a: 0, k: 78 }, r: 1 },
+            { ty: 'tr', p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } },
           ],
         },
       ],
       ip: 0,
-      op: 132,
+      op: 150,
       st: 0,
       bm: 0,
     },
@@ -482,7 +231,7 @@ function KivoThinkingOrb({ status }: { status: KivoAgentThinkingStatus }) {
   if (status === 'error') {
     return (
       <View style={[styles.fallbackOrb, styles.errorOrb]}>
-        <Feather name="x" size={14} color="#fff" strokeWidth={2.6} />
+        <Feather name="x" size={12} color="#fff" strokeWidth={2.5} />
       </View>
     );
   }
@@ -492,8 +241,8 @@ function KivoThinkingOrb({ status }: { status: KivoAgentThinkingStatus }) {
       <LottieView
         autoPlay
         loop
-        speed={0.78}
-        source={KIVO_THINKING_ORB_ANIMATION as any}
+        speed={0.74}
+        source={KIVO_REFERENCE_THINKING_ORB_ANIMATION as any}
         style={styles.lottieOrb}
       />
     </View>
@@ -501,69 +250,28 @@ function KivoThinkingOrb({ status }: { status: KivoAgentThinkingStatus }) {
 }
 
 function KivoStatusText({ title, isCard }: { title: string; isCard: boolean }) {
-  const shimmer = useRef(new Animated.Value(0)).current;
   const fade = useRef(new Animated.Value(1)).current;
   const previousTitleRef = useRef(title);
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmer, {
-          toValue: 1,
-          duration: 1900,
-          easing: Easing.inOut(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.delay(520),
-        Animated.timing(shimmer, {
-          toValue: 0,
-          duration: 0,
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-
-    loop.start();
-
-    return () => loop.stop();
-  }, [shimmer]);
 
   useEffect(() => {
     if (previousTitleRef.current === title) return;
 
     previousTitleRef.current = title;
-    fade.setValue(0.35);
+    fade.setValue(0.42);
 
     Animated.timing(fade, {
       toValue: 1,
-      duration: 240,
+      duration: 260,
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start();
   }, [fade, title]);
-
-  const shimmerTranslateX = shimmer.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-110, 220],
-  });
 
   return (
     <Animated.View style={[styles.statusTextWrap, { opacity: fade }]}>
       <Text numberOfLines={1} style={isCard ? styles.cardTitle : styles.lineTitle}>
         {title}
       </Text>
-
-      {!isCard ? (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.textLightSweep,
-            {
-              transform: [{ translateX: shimmerTranslateX }, { rotate: '14deg' }],
-            },
-          ]}
-        />
-      ) : null}
     </Animated.View>
   );
 }
@@ -646,11 +354,11 @@ function KivoAgentThinkingIndicatorBase({
   showSteps,
   style,
 }: Props) {
-  const copy = statusCopy[status] ?? statusCopy.thinking;
-  const title = label ?? copy.label;
-  const subtitle = detail ?? copy.detail;
   const shouldShowSteps = showSteps ?? steps.length > 0;
   const isCard = variant === 'card' || shouldShowSteps;
+  const copy = statusCopy[status] ?? statusCopy.thinking;
+  const title = label ?? (isCard || status === 'error' ? copy.label : 'Thinking');
+  const subtitle = detail ?? copy.detail;
 
   const accessibilityLabel = useMemo(() => {
     if (subtitle) return `Kivo status: ${title}. ${subtitle}`;
@@ -696,10 +404,10 @@ const styles = StyleSheet.create({
   line: {
     alignSelf: 'flex-start',
     maxWidth: '88%',
-    minHeight: 50,
+    minHeight: 38,
     paddingHorizontal: 0,
     marginTop: 0,
-    marginBottom: 10,
+    marginBottom: 11,
   },
   card: {
     alignSelf: 'flex-start',
@@ -720,23 +428,23 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 15,
+    gap: 13,
   },
   orbWrap: {
-    width: 42,
-    height: 42,
+    width: 34,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: -1,
   },
   lottieOrb: {
-    width: 60,
-    height: 60,
+    width: 46,
+    height: 46,
   },
   fallbackOrb: {
-    width: 29,
-    height: 29,
-    borderRadius: 15,
+    width: 25,
+    height: 25,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -749,23 +457,15 @@ const styles = StyleSheet.create({
   },
   statusTextWrap: {
     alignSelf: 'flex-start',
-    minWidth: 164,
-    overflow: 'hidden',
-  },
-  textLightSweep: {
-    position: 'absolute',
-    top: -8,
-    bottom: -8,
-    width: 34,
-    backgroundColor: 'rgba(255,255,255,0.42)',
-    opacity: 0.38,
+    minWidth: 118,
+    overflow: 'visible',
   },
   lineTitle: {
-    color: '#6f727a',
-    fontSize: 26,
-    fontWeight: '400',
-    letterSpacing: 1.05,
-    lineHeight: 34,
+    color: '#6f7077',
+    fontSize: 22.5,
+    fontWeight: '300',
+    letterSpacing: 1.2,
+    lineHeight: 28,
   },
   cardTitle: {
     color: '#111216',
