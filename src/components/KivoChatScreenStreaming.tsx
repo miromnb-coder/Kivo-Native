@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Image, Keyboard, PanResponder, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import LottieView from 'lottie-react-native';
+import {
+  Animated,
+  Easing,
+  Image,
+  Keyboard,
+  PanResponder,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { askKivoAiStream } from '../lib/kivo-ai';
@@ -20,6 +32,7 @@ import { KivoTopBar } from './KivoTopBar';
 
 const SIDEBAR_BACKGROUND = '#f4f4f6';
 const BASE_CHAT_BOTTOM_PADDING = 220;
+const kivoThinkingOrb = require('../../assets/lottie/kivo-thinking-orb.json');
 
 type ChatMessage = {
   id: string;
@@ -196,47 +209,38 @@ function KivoAssistantContent({ text }: { text: string }) {
 }
 
 function KivoThinkingLine() {
-  const dotOne = useRef(new Animated.Value(0.34)).current;
-  const dotTwo = useRef(new Animated.Value(0.34)).current;
-  const dotThree = useRef(new Animated.Value(0.34)).current;
-  const shimmer = useRef(new Animated.Value(0)).current;
+  const fade = useRef(new Animated.Value(0.56)).current;
 
   useEffect(() => {
-    const makeDotLoop = (dot: Animated.Value, delay: number) => Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
-        Animated.delay(delay),
-        Animated.timing(dot, { toValue: 1, duration: 260, useNativeDriver: true }),
-        Animated.timing(dot, { toValue: 0.34, duration: 360, useNativeDriver: true }),
+        Animated.timing(fade, {
+          toValue: 0.86,
+          duration: 1200,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(fade, {
+          toValue: 0.56,
+          duration: 1200,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
       ]),
     );
 
-    const loops = [
-      makeDotLoop(dotOne, 0),
-      makeDotLoop(dotTwo, 120),
-      makeDotLoop(dotThree, 240),
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(shimmer, { toValue: 1, duration: 900, useNativeDriver: true }),
-          Animated.timing(shimmer, { toValue: 0, duration: 900, useNativeDriver: true }),
-        ]),
-      ),
-    ];
+    loop.start();
 
-    loops.forEach((loop) => loop.start());
-
-    return () => loops.forEach((loop) => loop.stop());
-  }, [dotOne, dotThree, dotTwo, shimmer]);
-
-  const textOpacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.46, 0.86] });
+    return () => loop.stop();
+  }, [fade]);
 
   return (
     <View style={styles.thinkingLine}>
-      <Animated.Text style={[styles.thinkingText, { opacity: textOpacity }]}>Kivo is thinking</Animated.Text>
-      <View style={styles.thinkingDots}>
-        <Animated.View style={[styles.thinkingDot, { opacity: dotOne }]} />
-        <Animated.View style={[styles.thinkingDot, { opacity: dotTwo }]} />
-        <Animated.View style={[styles.thinkingDot, { opacity: dotThree }]} />
+      <View style={styles.thinkingOrbWrap}>
+        <LottieView autoPlay loop speed={0.72} source={kivoThinkingOrb} style={styles.thinkingOrb} />
       </View>
+
+      <Animated.Text style={[styles.thinkingText, { opacity: fade }]}>Thinking</Animated.Text>
     </View>
   );
 }
@@ -857,31 +861,33 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 13.5,
     lineHeight: 18,
-    letterSpacing: -0.25,
+    letterSpacing: -0.22,
   },
   thinkingLine: {
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    minHeight: 42,
+    marginTop: 1,
     marginBottom: 18,
-    paddingLeft: 2,
+    paddingLeft: 1,
+  },
+  thinkingOrbWrap: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 13,
+  },
+  thinkingOrb: {
+    width: 50,
+    height: 50,
   },
   thinkingText: {
-    color: '#8f9098',
-    fontSize: 14.5,
-    lineHeight: 20,
-    letterSpacing: -0.26,
-  },
-  thinkingDots: {
-    flexDirection: 'row',
-    gap: 4,
-    paddingTop: 2,
-  },
-  thinkingDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#8f9098',
+    color: '#6f7077',
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '300',
+    letterSpacing: 1.15,
   },
 });
