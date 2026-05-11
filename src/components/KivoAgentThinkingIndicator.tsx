@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { memo, useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { colors } from '../theme/colors';
 
 export type KivoAgentThinkingStatus =
@@ -34,7 +34,7 @@ type Props = {
   steps?: KivoAgentThinkingStep[];
   variant?: 'line' | 'card';
   showSteps?: boolean;
-  style?: object;
+  style?: StyleProp<ViewStyle>;
 };
 
 const statusCopy: Record<KivoAgentThinkingStatus, { label: string; detail?: string }> = {
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   stepLabel: {
     color: colors.text,
     fontSize: 13.8,
-    fontWeight: '650',
+    fontWeight: '600',
     letterSpacing: -0.2,
     lineHeight: 17,
   },
