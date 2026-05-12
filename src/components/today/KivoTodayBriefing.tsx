@@ -20,7 +20,7 @@ type Props = {
 };
 
 const defaultNeedsAttention = [
-  '2 important emails',
+  '2 priority messages',
   '1 file to review',
   '1 follow-up waiting',
 ];
@@ -29,7 +29,7 @@ export function KivoTodayBriefing({
   preferredName = 'Miro',
   connectedSources = ['Calendar', 'Mail', 'Drive'],
   limitedContext = false,
-  focusText = 'Finish the product design review, send the most important update, and protect one deep work block this afternoon.',
+  focusText = 'Finish the product design review, send the key update, and protect one deep work block.',
   timelineItems,
   needsAttention = defaultNeedsAttention,
 }: Props) {
@@ -53,9 +53,9 @@ export function KivoTodayBriefing({
       </KivoTodaySection>
 
       <KivoTodaySection tone="assist" title="I can help with" showDivider={false}>
-        <KivoTodayActionLine icon="edit-3">Draft replies and updates</KivoTodayActionLine>
-        <KivoTodayActionLine icon="file-text">Summarize notes and files</KivoTodayActionLine>
-        <KivoTodayActionLine icon="corner-up-right">Plan the next step</KivoTodayActionLine>
+        <KivoTodayActionLine icon="edit-3">Draft replies</KivoTodayActionLine>
+        <KivoTodayActionLine icon="file-text">Summarize notes</KivoTodayActionLine>
+        <KivoTodayActionLine icon="corner-up-right">Plan next step</KivoTodayActionLine>
       </KivoTodaySection>
 
       <KivoTodayComposerHint />
@@ -65,8 +65,8 @@ export function KivoTodayBriefing({
 
 const styles = StyleSheet.create({
   wrap: {
-    paddingHorizontal: 28,
-    paddingTop: 86,
-    paddingBottom: 6,
+    paddingHorizontal: 14,
+    paddingTop: 18,
+    paddingBottom: 0,
   },
 });
