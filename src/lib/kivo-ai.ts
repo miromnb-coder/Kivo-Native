@@ -294,17 +294,41 @@ async function savePossibleMemories(message: string) {
   }
 }
 
+async function resolveConversationId(conversationId?: string | null) {
+  if (conversationId) return conversationId;
+
+  try {
+    const { data, error } = await supabase
+      .from('kivo_conversations')
+      .select('id')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('Failed to resolve latest conversation id', error);
+      return null;
+    }
+
+    return typeof data?.id === 'string' ? data.id : null;
+  } catch (error) {
+    console.warn('Failed to resolve conversation id', error);
+    return null;
+  }
+}
+
 async function invokeKivoAgent({ message, photo, history = [], conversationId }: KivoChatRequest) {
   if (!supabaseUrl || !supabasePublishableKey) throw new Error('Supabase URL or publishable key is missing.');
 
   const memoryPayload = await buildMemoryPayload(message || 'image analysis');
+  const resolvedConversationId = await resolveConversationId(conversationId);
   const response = await fetch(`${supabaseUrl}/functions/v1/kivo-agent`, {
     method: 'POST',
     headers: await getFunctionHeaders(),
     body: JSON.stringify({
       message,
       history,
-      conversationId,
+      conversationId: resolvedConversationId,
       stream: false,
       metadata: { client: 'kivo-native', clientPersistsMessages: true },
       ...memoryPayload,
