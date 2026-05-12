@@ -66,7 +66,7 @@ export function KivoTodayBriefing({
 const styles = StyleSheet.create({
   wrap: {
     paddingHorizontal: 28,
-    paddingTop: 106,
-    paddingBottom: 26,
+    paddingTop: 86,
+    paddingBottom: 6,
   },
 });
