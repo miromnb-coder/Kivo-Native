@@ -13,7 +13,7 @@ export function KivoTodayHero({ preferredName = 'Miro', title, subtitle }: Props
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title} adjustsFontSizeToFit numberOfLines={2} minimumFontScale={0.82}>
+      <Text style={styles.title} adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.72}>
         {resolvedTitle}
       </Text>
       <Text style={styles.subtitle} numberOfLines={1}>
@@ -25,21 +25,21 @@ export function KivoTodayHero({ preferredName = 'Miro', title, subtitle }: Props
 
 const styles = StyleSheet.create({
   wrap: {
-    paddingTop: 10,
-    paddingBottom: 12,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
   title: {
     color: colors.text,
-    fontSize: 37,
-    lineHeight: 42,
+    fontSize: 31,
+    lineHeight: 36,
     fontWeight: '700',
-    letterSpacing: -2.05,
+    letterSpacing: -1.45,
   },
   subtitle: {
-    marginTop: 8,
+    marginTop: 6,
     color: '#676870',
-    fontSize: 15.5,
-    lineHeight: 21,
-    letterSpacing: -0.42,
+    fontSize: 14,
+    lineHeight: 18,
+    letterSpacing: -0.34,
   },
 });
