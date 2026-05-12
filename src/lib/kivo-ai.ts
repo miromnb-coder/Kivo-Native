@@ -12,8 +12,14 @@ export type KivoSource = {
 
 export type KivoAiMetadata = {
   usedSearch?: boolean;
+  usedMemory?: boolean;
+  usedVision?: boolean;
   sources?: KivoSource[];
   model?: string;
+  intent?: string;
+  tracing?: boolean;
+  runId?: string;
+  memoryCount?: number;
 };
 
 export type KivoChatMessageInput = {
@@ -25,17 +31,23 @@ export type KivoChatRequest = {
   message: string;
   photo?: RecentPhoto | null;
   history?: KivoChatMessageInput[];
+  conversationId?: string | null;
 };
 
 type KivoChatFunctionResponse = {
   answer?: string;
   title?: string;
   model?: string;
+  intent?: string;
+  tracing?: boolean;
+  runId?: string;
+  memoryCount?: number;
   usedVision?: boolean;
   usedMemory?: boolean;
   usedSearch?: boolean;
   sources?: KivoSource[];
   error?: string;
+  detail?: string;
 };
 
 type KivoParsedAnswer = {
@@ -60,23 +72,17 @@ function buildFallbackAnswer(message: string, photo?: RecentPhoto | null) {
     return 'Kuva valittiin, mutta en saanut siitä vielä analysoitavaa dataa. Valitse kuva uudelleen plus-valikosta ja kokeile “Mitä kuvassa näkyy?”.';
   }
 
-  if (photo && message.trim()) {
-    return 'I received the image and your message, but the AI backend is not fully connected yet. Check the Supabase Edge Function, vision model, and GROQ_API_KEY secret.';
-  }
-
   if (photo) {
     return 'I received the image, but the AI backend is not fully connected yet. Check the Supabase Edge Function, vision model, and GROQ_API_KEY secret.';
   }
 
-  return 'I could not reach the AI backend yet. Check that the kivo-chat Edge Function is deployed and GROQ_API_KEY is set in Supabase secrets.';
+  return 'I could not reach the AI backend yet. Check that the kivo-agent Edge Function is deployed and GROQ_API_KEY is set in Supabase secrets.';
 }
 
 function fallbackTitle(message: string, photo?: RecentPhoto | null) {
   const clean = message.replace(/\s+/g, ' ').trim();
-
   if (!clean && photo) return 'Image analysis';
   if (!clean) return 'New conversation';
-
   return clean.length > 44 ? `${clean.slice(0, 44).trim()}...` : clean;
 }
 
@@ -93,7 +99,6 @@ function cleanConversationTitle(value: string) {
 
 function buildPhotoPayload(photo?: RecentPhoto | null) {
   if (!photo) return {};
-
   return {
     photoAttached: true,
     imageBase64: photo.base64 ?? undefined,
@@ -111,9 +116,8 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function playFallbackTypewriter(answer: string, onDelta?: (delta: string) => void) {
+async function playTypewriter(answer: string, onDelta?: (delta: string) => void) {
   if (!onDelta) return;
-
   for (const chunk of splitForTypewriter(answer)) {
     onDelta(chunk);
     await wait(18);
@@ -121,11 +125,7 @@ async function playFallbackTypewriter(answer: string, onDelta?: (delta: string) 
 }
 
 function normalizeAnswerText(value: string) {
-  return value
-    .replace(/\\n/g, '\n')
-    .replace(/\\t/g, ' ')
-    .replace(/\r\n/g, '\n')
-    .trim();
+  return value.replace(/\\n/g, '\n').replace(/\\t/g, ' ').replace(/\r\n/g, '\n').trim();
 }
 
 function normalizeUrl(value: string) {
@@ -141,25 +141,16 @@ function getDomainFromUrl(url: string) {
 }
 
 function faviconForDomain(domain: string) {
-  if (!domain) return undefined;
-  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
+  return domain ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64` : undefined;
 }
 
 function makeSource(title: string, url: string, date?: string): KivoSource | null {
   const cleanUrl = normalizeUrl(url);
   if (!cleanUrl) return null;
-
   const normalizedUrl = cleanUrl.startsWith('http') ? cleanUrl : `https://${cleanUrl}`;
   const domain = getDomainFromUrl(normalizedUrl);
-  const cleanTitle = title
-    .replace(/^[-*\d.)\s]+/, '')
-    .replace(/\[[^\]]+\]\([^)]*\)/g, '')
-    .replace(/https?:\/\/\S+/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-
   return {
-    title: cleanTitle || domain,
+    title: title.replace(/^[-*\d.)\s]+/, '').replace(/\[[^\]]+\]\([^)]*\)/g, '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim() || domain,
     url: normalizedUrl,
     domain,
     faviconUrl: faviconForDomain(domain),
@@ -207,26 +198,16 @@ function parseSourcesFromText(rawAnswer: string) {
       const source = makeSource(line, match[0]);
       if (source) sources.push(source);
     }
-
-    if (!markdownLinks.length && !plainUrls.length) {
-      const domainMatch = line.match(/((?:[a-z0-9-]+\.)+[a-z]{2,})(?:\s*[-–—:]\s*(.+))?/i);
-      if (domainMatch) {
-        const source = makeSource(domainMatch[2] || line, domainMatch[1]);
-        if (source) sources.push(source);
-      }
-    }
   }
 
-  const answer = answerLines.join('\n').trim() || normalized;
   return {
-    answer,
+    answer: answerLines.join('\n').trim() || normalized,
     sources: dedupeSources(sources),
   };
 }
 
 function normalizeSources(value: unknown) {
   if (!Array.isArray(value)) return [];
-
   return dedupeSources(value.map((item) => {
     if (!item || typeof item !== 'object') return null;
     const source = item as Partial<KivoSource>;
@@ -246,40 +227,42 @@ function extractAnswerFromRawResponse(raw: string, fallback: string): KivoParsed
     const answer = normalizeAnswerText(parsed.answer?.trim() || fallback);
     const sourceParseResult = parseSourcesFromText(answer);
     const sources = parsedSources.length ? parsedSources : sourceParseResult.sources;
-
     return {
       answer: sourceParseResult.answer || answer,
       metadata: {
         model: parsed.model,
+        intent: parsed.intent,
+        tracing: parsed.tracing,
+        runId: parsed.runId,
+        memoryCount: parsed.memoryCount,
+        usedMemory: parsed.usedMemory,
+        usedVision: parsed.usedVision,
         usedSearch: Boolean(parsed.usedSearch || sources.length),
         sources,
       },
     };
   } catch {
-    // Not JSON. Use text as-is.
+    const sourceParseResult = parseSourcesFromText(clean);
+    return {
+      answer: sourceParseResult.answer || fallback,
+      metadata: {
+        usedSearch: sourceParseResult.sources.length > 0,
+        sources: sourceParseResult.sources,
+      },
+    };
   }
-
-  const sourceParseResult = parseSourcesFromText(clean);
-  return {
-    answer: sourceParseResult.answer || fallback,
-    metadata: {
-      usedSearch: sourceParseResult.sources.length > 0,
-      sources: sourceParseResult.sources,
-    },
-  };
 }
 
 async function playParsedResponseText(raw: string, fallback: string, onDelta?: (delta: string) => void, onMetadata?: (metadata: KivoAiMetadata) => void) {
   const parsed = extractAnswerFromRawResponse(raw, fallback);
   onMetadata?.(parsed.metadata);
-  await playFallbackTypewriter(parsed.answer, onDelta);
+  await playTypewriter(parsed.answer, onDelta);
   return parsed.answer;
 }
 
 async function getFunctionHeaders() {
   const { data } = await supabase.auth.getSession();
   const accessToken = data.session?.access_token ?? supabasePublishableKey;
-
   return {
     apikey: supabasePublishableKey ?? '',
     Authorization: `Bearer ${accessToken ?? ''}`,
@@ -290,154 +273,123 @@ async function getFunctionHeaders() {
 
 async function buildMemoryPayload(message: string) {
   try {
-    const memoryContext = await buildKivoMemoryContext(message, {
-      limit: 8,
-      markUsed: true,
-    });
-
+    const memoryContext = await buildKivoMemoryContext(message, { limit: 8, markUsed: true });
     return {
       memoryContext: memoryContext.contextText || undefined,
       memoryCount: memoryContext.memories.length,
     };
   } catch (error) {
     console.warn('Failed to build Kivo memory context', error);
-    return {
-      memoryContext: undefined,
-      memoryCount: 0,
-    };
+    return { memoryContext: undefined, memoryCount: 0 };
   }
 }
 
 async function savePossibleMemories(message: string) {
   try {
     await saveInferredMemoriesFromMessage(message, {
-      metadata: {
-        capturedBy: 'kivo-ai-client',
-      },
+      metadata: { capturedBy: 'kivo-ai-client' },
     });
   } catch (error) {
     console.warn('Failed to save inferred Kivo memories', error);
   }
 }
 
-export async function askKivoAi({ message, photo, history = [] }: KivoChatRequest) {
-  try {
-    const memoryPayload = await buildMemoryPayload(message);
+async function invokeKivoAgent({ message, photo, history = [], conversationId }: KivoChatRequest) {
+  if (!supabaseUrl || !supabasePublishableKey) throw new Error('Supabase URL or publishable key is missing.');
 
-    const { data, error } = await supabase.functions.invoke<KivoChatFunctionResponse>('kivo-chat', {
-      body: {
-        mode: 'chat',
-        message,
-        history,
-        ...memoryPayload,
-        ...buildPhotoPayload(photo),
-      },
-    });
+  const memoryPayload = await buildMemoryPayload(message || 'image analysis');
+  const response = await fetch(`${supabaseUrl}/functions/v1/kivo-agent`, {
+    method: 'POST',
+    headers: await getFunctionHeaders(),
+    body: JSON.stringify({
+      message,
+      history,
+      conversationId,
+      stream: false,
+      metadata: { client: 'kivo-native', clientPersistsMessages: true },
+      ...memoryPayload,
+      ...buildPhotoPayload(photo),
+    }),
+  });
 
-    void savePossibleMemories(message);
-
-    if (error) {
-      console.warn('kivo-chat function error', error);
-      return buildFallbackAnswer(message, photo);
+  const raw = await response.text();
+  if (!response.ok) {
+    let detail = raw;
+    try {
+      const parsed = JSON.parse(raw) as KivoChatFunctionResponse;
+      detail = parsed.detail || parsed.error || raw;
+    } catch {
+      // Keep raw text.
     }
-
-    const answer = data?.answer?.trim();
-    if (!answer) {
-      return buildFallbackAnswer(message, photo);
-    }
-
-    return extractAnswerFromRawResponse(JSON.stringify(data), answer).answer;
-  } catch (error) {
-    console.warn('Failed to call kivo-chat function', error);
-    return buildFallbackAnswer(message, photo);
+    throw new Error(detail || `kivo-agent request failed with status ${response.status}`);
   }
+
+  return raw;
 }
 
-export async function askKivoAiStream({ message, photo, history = [], onDelta, onMetadata }: KivoStreamRequest) {
-  if (!supabaseUrl || !supabasePublishableKey) {
-    const answer = buildFallbackAnswer(message, photo);
-    await playFallbackTypewriter(answer, onDelta);
-    return answer;
-  }
+async function invokeLegacyKivoChat({ message, photo, history = [] }: KivoChatRequest) {
+  const memoryPayload = await buildMemoryPayload(message || 'image analysis');
+  const { data, error } = await supabase.functions.invoke<KivoChatFunctionResponse>('kivo-chat', {
+    body: {
+      mode: 'chat',
+      message,
+      history,
+      ...memoryPayload,
+      ...buildPhotoPayload(photo),
+    },
+  });
 
+  if (error) throw error;
+  return JSON.stringify(data ?? {});
+}
+
+export async function askKivoAi({ message, photo, history = [], conversationId }: KivoChatRequest) {
   const fallback = buildFallbackAnswer(message, photo);
 
   try {
-    const memoryPayload = await buildMemoryPayload(message);
+    const raw = await invokeKivoAgent({ message, photo, history, conversationId });
+    void savePossibleMemories(message);
+    return extractAnswerFromRawResponse(raw, fallback).answer;
+  } catch (agentError) {
+    console.warn('kivo-agent function error, falling back to kivo-chat', agentError);
 
-    const response = await fetch(`${supabaseUrl}/functions/v1/kivo-chat`, {
-      method: 'POST',
-      headers: await getFunctionHeaders(),
-      body: JSON.stringify({
-        mode: 'chat',
-        stream: true,
-        message,
-        history,
-        ...memoryPayload,
-        ...buildPhotoPayload(photo),
-      }),
-    });
-
-    if (!response.ok) {
-      const answer = await askKivoAi({ message, photo, history });
-      await playFallbackTypewriter(answer, onDelta);
-      return answer;
-    }
-
-    const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
-
-    if (contentType.includes('application/json')) {
-      const raw = await response.text();
-      const answer = await playParsedResponseText(raw, fallback, onDelta, onMetadata);
+    try {
+      const raw = await invokeLegacyKivoChat({ message, photo, history, conversationId });
       void savePossibleMemories(message);
-      return answer;
-    }
-
-    const reader = response.body?.getReader?.();
-
-    if (!reader) {
-      const raw = await response.text();
-      const answer = await playParsedResponseText(raw, fallback, onDelta, onMetadata);
-      void savePossibleMemories(message);
-      return answer;
-    }
-
-    const decoder = new TextDecoder();
-    let finalAnswer = '';
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      if (!chunk) continue;
-
-      finalAnswer += chunk;
-      onDelta?.(chunk);
-    }
-
-    const tail = decoder.decode();
-    if (tail) {
-      finalAnswer += tail;
-      onDelta?.(tail);
-    }
-
-    const parsed = extractAnswerFromRawResponse(finalAnswer, fallback);
-    const cleanAnswer = parsed.answer;
-    onMetadata?.(parsed.metadata);
-
-    if (!cleanAnswer) {
-      await playFallbackTypewriter(fallback, onDelta);
+      return extractAnswerFromRawResponse(raw, fallback).answer;
+    } catch (legacyError) {
+      console.warn('kivo-chat fallback failed', legacyError);
       return fallback;
     }
+  }
+}
 
+export async function askKivoAiStream({ message, photo, history = [], conversationId, onDelta, onMetadata }: KivoStreamRequest) {
+  const fallback = buildFallbackAnswer(message, photo);
+
+  if (!supabaseUrl || !supabasePublishableKey) {
+    await playTypewriter(fallback, onDelta);
+    return fallback;
+  }
+
+  try {
+    const raw = await invokeKivoAgent({ message, photo, history, conversationId });
+    const answer = await playParsedResponseText(raw, fallback, onDelta, onMetadata);
     void savePossibleMemories(message);
-    return cleanAnswer;
-  } catch (error) {
-    console.warn('Failed to stream Kivo answer', error);
-    const answer = await askKivoAi({ message, photo, history });
-    await playFallbackTypewriter(answer, onDelta);
     return answer;
+  } catch (agentError) {
+    console.warn('Failed to call kivo-agent, falling back to kivo-chat', agentError);
+
+    try {
+      const raw = await invokeLegacyKivoChat({ message, photo, history, conversationId });
+      const answer = await playParsedResponseText(raw, fallback, onDelta, onMetadata);
+      void savePossibleMemories(message);
+      return answer;
+    } catch (legacyError) {
+      console.warn('Failed to call kivo-chat fallback', legacyError);
+      await playTypewriter(fallback, onDelta);
+      return fallback;
+    }
   }
 }
 
