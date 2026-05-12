@@ -18,7 +18,7 @@ export function KivoTodaySection({ tone, title, icon, children, showDivider = tr
   return (
     <View style={[styles.section, showDivider && styles.divider]}>
       <View style={styles.badgeColumn}>
-        <KivoSectionIconBadge tone={tone} icon={icon} />
+        <KivoSectionIconBadge tone={tone} icon={icon} compact />
       </View>
       <View style={styles.content}>
         <Text style={styles.title}>{title}</Text>
@@ -36,7 +36,7 @@ export function KivoTodayBullet({ children, icon = 'check' }: { children: ReactN
   return (
     <View style={styles.bulletRow}>
       <View style={styles.bulletIcon}>
-        <Feather name={icon} size={9.5} color="#ffffff" strokeWidth={2.35} />
+        <Feather name={icon} size={8.8} color="#ffffff" strokeWidth={2.35} />
       </View>
       <Text style={styles.bulletText}>{children}</Text>
     </View>
@@ -46,7 +46,7 @@ export function KivoTodayBullet({ children, icon = 'check' }: { children: ReactN
 export function KivoTodayActionLine({ children, icon }: { children: ReactNode; icon: keyof typeof Feather.glyphMap }) {
   return (
     <View style={styles.actionRow}>
-      <Feather name={icon} size={13} color="#777980" strokeWidth={1.8} />
+      <Feather name={icon} size={12} color="#777980" strokeWidth={1.8} />
       <Text style={styles.actionText}>{children}</Text>
     </View>
   );
@@ -55,16 +55,16 @@ export function KivoTodayActionLine({ children, icon }: { children: ReactNode; i
 const styles = StyleSheet.create({
   section: {
     flexDirection: 'row',
-    paddingTop: 27,
-    paddingBottom: 26,
+    paddingTop: 20,
+    paddingBottom: 19,
   },
   divider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
   badgeColumn: {
-    width: 58,
-    paddingTop: 1,
+    width: 50,
+    paddingTop: 0,
   },
   content: {
     flex: 1,
@@ -72,31 +72,31 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 18,
-    lineHeight: 23,
+    fontSize: 17.2,
+    lineHeight: 22,
     fontWeight: '700',
-    letterSpacing: -0.68,
+    letterSpacing: -0.62,
   },
   body: {
-    marginTop: 13,
-    gap: 8,
+    marginTop: 10,
+    gap: 5,
   },
   bodyText: {
     color: '#3d3e45',
-    fontSize: 15.5,
-    lineHeight: 25,
-    letterSpacing: -0.38,
+    fontSize: 14.9,
+    lineHeight: 22,
+    letterSpacing: -0.35,
   },
   bulletRow: {
-    minHeight: 24,
+    minHeight: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 11,
   },
   bulletIcon: {
-    width: 15,
-    height: 15,
-    borderRadius: 8,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#b9bac0',
@@ -104,21 +104,21 @@ const styles = StyleSheet.create({
   bulletText: {
     flex: 1,
     color: '#3d3e45',
-    fontSize: 14.6,
-    lineHeight: 22,
-    letterSpacing: -0.32,
+    fontSize: 14.2,
+    lineHeight: 20,
+    letterSpacing: -0.3,
   },
   actionRow: {
-    minHeight: 24,
+    minHeight: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 11,
+    gap: 10,
   },
   actionText: {
     flex: 1,
     color: '#3d3e45',
-    fontSize: 14.5,
-    lineHeight: 22,
-    letterSpacing: -0.31,
+    fontSize: 14.1,
+    lineHeight: 20,
+    letterSpacing: -0.29,
   },
 });
