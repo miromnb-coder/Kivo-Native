@@ -21,15 +21,15 @@ export const toolRegistry: Record<KivoToolName, KivoToolDefinition> = {
     connected: true,
     permission: 'read',
     requiresConfirmation: false,
-    description: 'Search relevant user memories from Supabase.',
+    description: 'Search relevant user memories from Supabase. Core v1 connected tool.',
   },
   memory_save: {
     name: 'memory_save',
-    version: '1.0.0',
-    connected: true,
+    version: '0.1.0',
+    connected: false,
     permission: 'write',
     requiresConfirmation: true,
-    description: 'Save stable long-term user memory.',
+    description: 'Planned memory save tool. Not enabled in Core v1.',
   },
   groq_chat: {
     name: 'groq_chat',
@@ -37,15 +37,15 @@ export const toolRegistry: Record<KivoToolName, KivoToolDefinition> = {
     connected: true,
     permission: 'external',
     requiresConfirmation: false,
-    description: 'Generate a final answer with Groq.',
+    description: 'Generate a final answer with Groq. Core v1 connected tool.',
   },
   image_analysis: {
     name: 'image_analysis',
-    version: '1.0.0',
-    connected: true,
+    version: '0.1.0',
+    connected: false,
     permission: 'external',
     requiresConfirmation: false,
-    description: 'Analyze an attached image through a vision model.',
+    description: 'Planned image analysis tool. Keep disabled in Core v1 unless explicitly enabled later.',
   },
   web_search: {
     name: 'web_search',
@@ -53,7 +53,7 @@ export const toolRegistry: Record<KivoToolName, KivoToolDefinition> = {
     connected: false,
     permission: 'external',
     requiresConfirmation: false,
-    description: 'Placeholder for future live web search.',
+    description: 'Planned live web search tool. Not connected in Core v1.',
   },
 };
 
