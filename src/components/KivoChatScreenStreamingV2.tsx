@@ -21,7 +21,8 @@ import { KivoSourcesSheet } from './KivoSourcesSheet';
 import { KivoTopBar } from './KivoTopBar';
 
 const SIDEBAR_BACKGROUND = '#f4f4f6';
-const BASE_CHAT_BOTTOM_PADDING = 236;
+const CHAT_BOTTOM_PADDING = 236;
+const START_BRIEFING_BOTTOM_PADDING = 126;
 const KEYBOARD_BRIEFING_SCROLL_Y = 132;
 
 function storedMessageToChatMessage(message: KivoStoredMessage): ChatMessage {
@@ -55,7 +56,8 @@ export function KivoChatScreenStreamingV2() {
   const conversationLoadIdRef = useRef(0);
   const sidebarProgress = useRef(new Animated.Value(0)).current;
   const drawerWidth = 342;
-  const chatBottomPadding = BASE_CHAT_BOTTOM_PADDING + keyboardHeight;
+  const isStartBriefingOnly = showBriefingBlock && messages.length === 0 && !assistantThinking;
+  const chatBottomPadding = (isStartBriefingOnly ? START_BRIEFING_BOTTOM_PADDING : CHAT_BOTTOM_PADDING) + keyboardHeight;
 
   const chatTranslateX = sidebarProgress.interpolate({ inputRange: [0, 1], outputRange: [0, drawerWidth - 8] });
   const chatScale = sidebarProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 0.992] });
@@ -348,9 +350,11 @@ export function KivoChatScreenStreamingV2() {
         <ScrollView
           ref={chatScrollRef}
           style={styles.chatPreview}
-          contentContainerStyle={[styles.chatPreviewContent, { paddingTop: 0, paddingBottom: chatBottomPadding }]}
+          contentContainerStyle={[styles.chatPreviewContent, { paddingBottom: chatBottomPadding }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          bounces={!isStartBriefingOnly}
+          scrollEnabled={!isStartBriefingOnly}
           onContentSizeChange={() => {
             if (messages.length > 0 || assistantThinking) scrollChatToEnd(false);
           }}
