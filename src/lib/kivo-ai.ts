@@ -62,6 +62,12 @@ type KivoStreamRequest = KivoChatRequest & {
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const KIVO_RESPONSE_STYLE_GUIDE = [
+  'Do not use markdown tables or pipe-table formatting.',
+  'Use short paragraphs, compact headings, and simple bullets instead.',
+  'For comparisons, group information into readable sections rather than columns.',
+  'Optimize every answer for a narrow mobile chat screen.',
+].join(' ');
 
 function hasUsableImageData(photo?: RecentPhoto | null) {
   return Boolean(photo?.base64);
@@ -124,8 +130,114 @@ async function playTypewriter(answer: string, onDelta?: (delta: string) => void)
   }
 }
 
+function isMarkdownTableDivider(line: string) {
+  return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
+}
+
+function isMarkdownTableRow(line: string) {
+  if (!line.includes('|')) return false;
+  if (/https?:\/\//i.test(line) && !/^\s*\|/.test(line)) return false;
+  return line.split('|').filter((cell) => cell.trim().length > 0).length >= 2;
+}
+
+function splitMarkdownTableRow(line: string) {
+  return line
+    .replace(/^\s*\|/, '')
+    .replace(/\|\s*$/, '')
+    .split('|')
+    .map((cell) => cleanMarkdownCell(cell));
+}
+
+function cleanMarkdownCell(value: string) {
+  return value
+    .replace(/\\\|/g, '|')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/^`([^`]+)`$/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function convertMarkdownTableBlock(tableLines: string[]) {
+  const rows = tableLines
+    .filter((line) => !isMarkdownTableDivider(line))
+    .map(splitMarkdownTableRow)
+    .filter((row) => row.length >= 2 && row.some(Boolean));
+
+  if (rows.length < 2) {
+    return tableLines.filter((line) => !isMarkdownTableDivider(line)).map((line) => line.replace(/\s*\|\s*/g, ' — ').trim()).join('\n');
+  }
+
+  const [header, ...bodyRows] = rows;
+  const hasOnlyTwoColumns = header.length === 2;
+
+  return bodyRows.map((row) => {
+    const title = row[0] || header[0] || 'Item';
+    const details = header.slice(1).map((label, index) => {
+      const value = row[index + 1];
+      if (!value) return null;
+      if (hasOnlyTwoColumns) return value;
+      return `${label}: ${value}`;
+    }).filter((detail): detail is string => Boolean(detail));
+
+    if (!details.length) return title;
+    return `${title}\n${details.join('\n')}`;
+  }).join('\n\n');
+}
+
+function convertMarkdownTablesToMobileText(value: string) {
+  const lines = value.split('\n');
+  const output: string[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    const trimmed = line.trim();
+
+    if (!isMarkdownTableRow(trimmed)) {
+      output.push(line);
+      index += 1;
+      continue;
+    }
+
+    const tableLines: string[] = [];
+    let hasDivider = false;
+
+    while (index < lines.length) {
+      const current = lines[index].trim();
+      if (isMarkdownTableDivider(current)) {
+        hasDivider = true;
+        tableLines.push(current);
+        index += 1;
+        continue;
+      }
+
+      if (!isMarkdownTableRow(current)) break;
+      tableLines.push(current);
+      index += 1;
+    }
+
+    if (hasDivider || tableLines.length >= 2) {
+      output.push(convertMarkdownTableBlock(tableLines));
+    } else {
+      output.push(tableLines.join('\n'));
+    }
+  }
+
+  return output.join('\n');
+}
+
 function normalizeAnswerText(value: string) {
-  return value.replace(/\\n/g, '\n').replace(/\\t/g, ' ').replace(/\r\n/g, '\n').trim();
+  const decoded = value
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, ' ')
+    .replace(/\r\n/g, '\n')
+    .replace(/\u00a0/g, ' ');
+
+  return convertMarkdownTablesToMobileText(decoded)
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 function normalizeUrl(value: string) {
@@ -330,7 +442,11 @@ async function invokeKivoAgent({ message, photo, history = [], conversationId }:
       history,
       conversationId: resolvedConversationId,
       stream: false,
-      metadata: { client: 'kivo-native', clientPersistsMessages: true },
+      metadata: {
+        client: 'kivo-native',
+        clientPersistsMessages: true,
+        responseStyleGuide: KIVO_RESPONSE_STYLE_GUIDE,
+      },
       ...memoryPayload,
       ...buildPhotoPayload(photo),
     }),
@@ -358,6 +474,7 @@ async function invokeLegacyKivoChat({ message, photo, history = [] }: KivoChatRe
       mode: 'chat',
       message,
       history,
+      responseStyleGuide: KIVO_RESPONSE_STYLE_GUIDE,
       ...memoryPayload,
       ...buildPhotoPayload(photo),
     },
@@ -423,6 +540,7 @@ export async function generateKivoConversationTitle({ message, photo }: Pick<Kiv
       body: {
         mode: 'title',
         message,
+        responseStyleGuide: KIVO_RESPONSE_STYLE_GUIDE,
         ...buildPhotoPayload(photo),
       },
     });
