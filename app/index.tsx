@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, StyleSheet, View } from 'react-native';
 import * as ExpoLinking from 'expo-linking';
-import { KivoChatScreenStreaming } from '@/components/KivoChatScreenStreaming';
+import { KivoChatScreenStreamingV2 } from '@/components/KivoChatScreenStreamingV2';
 import { subscribeKivoSignOut } from '@/lib/kivo-auth-events';
 import { getKivoSession, supabase } from '@/lib/supabase';
 import { KivoAuthScreen, type KivoAuthMethod } from '@/screens/auth/KivoAuthScreen';
@@ -204,7 +204,7 @@ export default function Index() {
     return <KivoAuthScreen loading={authLoading} onContinue={handleAuthContinue} />;
   }
 
-  return <KivoChatScreenStreaming />;
+  return <KivoChatScreenStreamingV2 />;
 }
 
 const styles = StyleSheet.create({
