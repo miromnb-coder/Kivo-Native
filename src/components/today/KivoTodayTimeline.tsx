@@ -39,7 +39,7 @@ export function KivoTodayTimeline({ items = defaultItems }: Props) {
 const styles = StyleSheet.create({
   timeline: {
     flexDirection: 'row',
-    paddingTop: 1,
+    paddingTop: 0,
   },
   rail: {
     width: 28,
@@ -48,8 +48,8 @@ const styles = StyleSheet.create({
   },
   railLine: {
     position: 'absolute',
-    top: 9,
-    bottom: 12,
+    top: 8,
+    bottom: 9,
     width: StyleSheet.hairlineWidth,
     backgroundColor: '#d2d3d8',
   },
@@ -60,28 +60,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#c3c4ca',
   },
   railDotSpacing: {
-    marginTop: 25,
+    marginTop: 20,
   },
   items: {
     flex: 1,
-    gap: 15,
+    gap: 11,
   },
   itemRow: {
-    minHeight: 17,
+    minHeight: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 27,
+    gap: 24,
   },
   time: {
-    width: 54,
+    width: 52,
     color: '#777880',
-    fontSize: 15,
-    letterSpacing: -0.38,
+    fontSize: 14.4,
+    letterSpacing: -0.34,
   },
   title: {
     flex: 1,
     color: '#303137',
-    fontSize: 15,
-    letterSpacing: -0.35,
+    fontSize: 14.4,
+    letterSpacing: -0.33,
   },
 });
