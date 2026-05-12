@@ -24,14 +24,14 @@ import { finishTrace, startTrace, tracingEnabled } from './tracing/langsmith.ts'
 import { runGroqChat } from './tools/groq-chat.ts';
 import { buildKivoSystemPrompt } from './prompts/system.ts';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    },
-  });
+  if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   if (request.method !== 'POST') {
     return jsonResponse({ error: 'Method not allowed' }, 405);
@@ -74,23 +74,23 @@ Deno.serve(async (request) => {
       admin,
       userId,
       conversationId: body.conversationId ?? null,
-      message: body.message || 'Image analysis',
+      message: body.message || 'Image request',
     });
 
     ctx = {
       userId,
       conversationId,
       traceId,
-      message: body.message || 'Analyze this image.',
+      message: body.message || 'Image request',
       hasImage,
       startedAt,
     };
 
     await startTrace({
       traceId,
-      name: 'kivo-agent',
+      name: 'kivo-agent-core-v1',
       inputs: { message: ctx.message, conversationId, hasImage },
-      metadata: { userId, conversationId, source: 'kivo-native' },
+      metadata: { userId, conversationId, source: 'kivo-native', scope: 'core-v1' },
     });
 
     await ensureUsageRow({ admin, userId });
@@ -103,6 +103,7 @@ Deno.serve(async (request) => {
       eventType: 'message_received',
       label: 'Message received',
       detail: hasImage ? 'Text + image request' : 'Text request',
+      metadata: { coreVersion: 'v1' },
     }));
 
     if (body.metadata?.clientPersistsMessages !== true) {
@@ -190,36 +191,32 @@ Deno.serve(async (request) => {
     const systemPrompt = buildKivoSystemPrompt({
       intent: intent.name,
       memoryContext: builtContext.memoryContext,
-      hasImage,
+      hasImage: false,
     });
 
     const groqStartedAt = Date.now();
-    const groqToolRunId = makeId(hasImage ? 'image_analysis' : 'groq_chat');
+    const groqToolRunId = makeId('groq_chat');
+    const userText = hasImage
+      ? `${ctx.message}\n\nNote: The user attached an image, but image analysis is not connected in Kivo Agent Core v1. Do not describe or analyze the image. Explain this briefly in the user's language if the image is relevant.`
+      : ctx.message;
+
     const messages = [
       { role: 'system' as const, content: systemPrompt },
       ...builtContext.recentMessages,
       ...((body.history ?? []).map((item) => ({ role: item.role === 'assistant' ? 'assistant' as const : 'user' as const, content: item.content ?? '' }))),
-      hasImage
-        ? {
-            role: 'user' as const,
-            content: [
-              { type: 'text' as const, text: ctx.message },
-              { type: 'image_url' as const, image_url: { url: `data:${imageMimeType};base64,${imageBase64}` } },
-            ],
-          }
-        : { role: 'user' as const, content: ctx.message },
+      { role: 'user' as const, content: userText },
     ];
 
-    const groq = await runGroqChat({ messages, hasImage });
+    const groq = await runGroqChat({ messages, hasImage: false });
     toolRuns.push(await persistToolRun({
       admin,
       userId,
       conversationId,
       toolRunId: groqToolRunId,
-      toolName: hasImage ? 'image_analysis' : 'groq_chat',
+      toolName: 'groq_chat',
       status: 'success',
       startedAt: groqStartedAt,
-      request: { messageCount: messages.length, hasImage },
+      request: { messageCount: messages.length, hasImageIgnoredInCoreV1: hasImage },
       output: { model: groq.model, answerLength: groq.answer.length },
     }));
 
@@ -234,7 +231,7 @@ Deno.serve(async (request) => {
       });
     }
 
-    const creditsSpent = hasImage ? CREDIT_COSTS.vision : CREDIT_COSTS.normalChat;
+    const creditsSpent = CREDIT_COSTS.normalChat;
     await incrementUsage({ admin, userId, creditsSpent });
     await touchConversation({ admin, userId, conversationId });
 
@@ -246,7 +243,7 @@ Deno.serve(async (request) => {
       eventType: 'response_generated',
       label: 'Response generated',
       detail: groq.model,
-      metadata: { durationMs: Date.now() - startedAt },
+      metadata: { durationMs: Date.now() - startedAt, coreVersion: 'v1' },
     }));
 
     const response = buildAgentResponse({
