@@ -126,7 +126,16 @@ Deno.serve(async (request) => {
       eventType: 'intent_classified',
       label: 'Intent classified',
       detail: intent.name,
-      metadata: { confidence: intent.confidence, reason: intent.reason },
+      metadata: {
+        confidence: intent.confidence,
+        reason: intent.reason,
+        signals: intent.signals,
+        needsMemory: intent.needsMemory,
+        needsTool: intent.needsTool,
+        riskLevel: intent.riskLevel,
+        responseMode: intent.responseMode,
+        answerStyle: intent.answerStyle,
+      },
     }));
 
     const builtContext = await buildContext({ admin, userId, conversationId, request: body });
@@ -163,7 +172,15 @@ Deno.serve(async (request) => {
       eventType: 'plan_created',
       label: 'Plan created',
       detail: `${plan.steps.length} steps`,
-      metadata: { steps: plan.steps },
+      metadata: {
+        steps: plan.steps,
+        needsMemory: plan.needsMemory,
+        needsConfirmation: plan.needsConfirmation,
+        riskLevel: plan.riskLevel,
+        responseMode: plan.responseMode,
+        answerStyle: plan.answerStyle,
+        plannerNotes: plan.plannerNotes,
+      },
     }));
 
     const safety = checkSafety({ message: ctx.message, intent, plan });
@@ -192,6 +209,8 @@ Deno.serve(async (request) => {
       intent: intent.name,
       memoryContext: builtContext.memoryContext,
       hasImage: false,
+      responseMode: plan.responseMode,
+      answerStyle: plan.answerStyle,
     });
 
     const groqStartedAt = Date.now();
@@ -216,7 +235,7 @@ Deno.serve(async (request) => {
       toolName: 'groq_chat',
       status: 'success',
       startedAt: groqStartedAt,
-      request: { messageCount: messages.length, hasImageIgnoredInCoreV1: hasImage },
+      request: { messageCount: messages.length, hasImageIgnoredInCoreV1: hasImage, responseMode: plan.responseMode, answerStyle: plan.answerStyle },
       output: { model: groq.model, answerLength: groq.answer.length },
     }));
 
@@ -227,7 +246,7 @@ Deno.serve(async (request) => {
         conversationId,
         role: 'assistant',
         content: groq.answer,
-        metadata: { traceId, intent: intent.name, model: groq.model },
+        metadata: { traceId, intent: intent.name, model: groq.model, responseMode: plan.responseMode },
       });
     }
 
@@ -243,7 +262,7 @@ Deno.serve(async (request) => {
       eventType: 'response_generated',
       label: 'Response generated',
       detail: groq.model,
-      metadata: { durationMs: Date.now() - startedAt, coreVersion: 'v1' },
+      metadata: { durationMs: Date.now() - startedAt, coreVersion: 'v1', responseMode: plan.responseMode },
     }));
 
     const response = buildAgentResponse({
