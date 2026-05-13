@@ -66,8 +66,9 @@ const KIVO_RESPONSE_STYLE_GUIDE = [
   'Do not use markdown tables or pipe-table formatting.',
   'Use short paragraphs, compact headings, and simple bullets instead.',
   'For comparisons, group information into readable sections rather than columns.',
-  'Use markdown horizontal dividers --- only between major answer sections when it improves readability.',
-  'Do not overuse dividers. Never place them after every paragraph or tiny list item.',
+  'Use markdown horizontal dividers --- between most major answer sections to make the mobile response easier to scan.',
+  'Prefer a divider before clear section shifts such as Summary, Recommendation, Steps, Why this matters, Files, Commands, Next actions, or Follow-up.',
+  'Do not place dividers after every paragraph or tiny list item. Use them to separate real sections, not decorative spacing.',
   'Optimize every answer for a narrow mobile chat screen.',
 ].join(' ');
 
