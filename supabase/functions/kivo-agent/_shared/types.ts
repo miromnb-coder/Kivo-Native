@@ -16,6 +16,26 @@ export type KivoIntentName =
   | 'unsafe_or_restricted';
 
 export type KivoToolStatus = 'success' | 'failed' | 'blocked' | 'not_connected';
+export type KivoRiskLevel = 'low' | 'medium' | 'high';
+export type KivoResponseMode =
+  | 'direct'
+  | 'structured'
+  | 'planner'
+  | 'technical'
+  | 'design'
+  | 'clarifying'
+  | 'safe_refusal';
+
+export type KivoAnswerStyle = {
+  useDividers: boolean;
+  useCopyBlocks: boolean;
+  useBullets: boolean;
+  useNumberedSteps: boolean;
+  compact: boolean;
+  avoidTables: boolean;
+  maxSections: number;
+  languageMode: 'match_user';
+};
 
 export type KivoAgentRequest = {
   message?: string;
@@ -33,6 +53,12 @@ export type KivoIntent = {
   name: KivoIntentName;
   confidence: number;
   reason?: string;
+  signals?: string[];
+  needsMemory?: boolean;
+  needsTool?: boolean;
+  riskLevel?: KivoRiskLevel;
+  responseMode?: KivoResponseMode;
+  answerStyle?: KivoAnswerStyle;
 };
 
 export type KivoAgentEvent = {
