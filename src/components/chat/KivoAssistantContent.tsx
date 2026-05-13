@@ -16,6 +16,10 @@ function renderInlineText(text: string, keyPrefix: string, style = styles.assist
   });
 }
 
+function isSectionDivider(line: string) {
+  return /^(-{3,}|\*{3,}|_{3,})$/.test(line.trim());
+}
+
 export function KivoAssistantContent({ text }: { text: string }) {
   const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
 
@@ -24,6 +28,10 @@ export function KivoAssistantContent({ text }: { text: string }) {
   return (
     <View style={styles.assistantContent}>
       {lines.map((line, index) => {
+        if (isSectionDivider(line)) {
+          return <View key={`divider-${index}`} style={styles.sectionDivider} />;
+        }
+
         const heading = line.match(/^#{1,3}\s+(.+)$/);
         if (heading) {
           return (
@@ -66,6 +74,13 @@ export function KivoAssistantContent({ text }: { text: string }) {
 const styles = StyleSheet.create({
   assistantContent: {
     gap: 8,
+  },
+  sectionDivider: {
+    height: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+    backgroundColor: 'rgba(17, 18, 22, 0.075)',
+    marginTop: 10,
+    marginBottom: 8,
   },
   assistantText: {
     color: colors.text,
